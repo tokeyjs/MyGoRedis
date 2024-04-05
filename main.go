@@ -41,7 +41,7 @@ func init() {
 
 func main() {
 
-	// 开启
+	// 开启 服务
 	err := tcp.ListenAndServeWithSignal(
 		&tcp.Config{Address: fmt.Sprintf("%s:%d", config.Properties.Bind, config.Properties.Port)},
 		handler.MakeHandler(),
