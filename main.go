@@ -2,6 +2,7 @@ package main
 
 import (
 	"MyGoRedis/config"
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/resp/handler"
 	"MyGoRedis/tcp"
 	"fmt"
@@ -24,14 +25,13 @@ func fileExists(filename string) bool {
 }
 
 func init() {
-	logrus.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat:   "2006-01-02 15:04:05",
-		PrettyPrint:       true,
-		DisableHTMLEscape: false,
+	logger.Setup(&logger.Settings{
+		Path:       "logs",
+		Name:       "MyGoRedis",
+		Ext:        "log",
+		TimeFormat: "2006-01-02",
 	})
-	logrus.SetOutput(os.Stdout)
-	logrus.SetReportCaller(true)
-
+	// 从配置文件中载入配置
 	if fileExists(configFile) {
 		config.SetupConfig(configFile)
 	} else {

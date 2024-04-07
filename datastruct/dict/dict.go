@@ -15,3 +15,7 @@ type Dict interface {
 	RandomDistinctKeys(limit int) []string
 	Clear()
 }
+
+type DbDataType interface {
+	// 支持 string list set hash zset
+}

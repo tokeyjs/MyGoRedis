@@ -1,6 +1,8 @@
 package dict
 
-import "sync"
+import (
+	"sync"
+)
 
 type SyncDict struct {
 	dicMap sync.Map

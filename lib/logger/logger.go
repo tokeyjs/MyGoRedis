@@ -83,6 +83,13 @@ func Debug(v ...interface{}) {
 	logger.Println(v...)
 }
 
+func Debugf(format string, v ...interface{}) {
+	mu.Lock()
+	defer mu.Unlock()
+	setPrefix(DEBUG)
+	logger.Printf(format, v...)
+}
+
 // Info prints normal log
 func Info(v ...interface{}) {
 	mu.Lock()
@@ -91,12 +98,25 @@ func Info(v ...interface{}) {
 	logger.Println(v...)
 }
 
+func Infof(format string, v ...interface{}) {
+	mu.Lock()
+	defer mu.Unlock()
+	setPrefix(INFO)
+	logger.Printf(format, v...)
+}
+
 // Warn prints warning log
 func Warn(v ...interface{}) {
 	mu.Lock()
 	defer mu.Unlock()
 	setPrefix(WARNING)
 	logger.Println(v...)
+}
+func Warnf(format string, v ...interface{}) {
+	mu.Lock()
+	defer mu.Unlock()
+	setPrefix(WARNING)
+	logger.Printf(format, v...)
 }
 
 // Error prints error log
@@ -107,10 +127,24 @@ func Error(v ...interface{}) {
 	logger.Println(v...)
 }
 
+func Errorf(format string, v ...interface{}) {
+	mu.Lock()
+	defer mu.Unlock()
+	setPrefix(ERROR)
+	logger.Printf(format, v...)
+}
+
 // Fatal prints error log then stop the program
 func Fatal(v ...interface{}) {
 	mu.Lock()
 	defer mu.Unlock()
 	setPrefix(FATAL)
 	logger.Fatalln(v...)
+}
+
+func Fatalf(format string, v ...interface{}) {
+	mu.Lock()
+	defer mu.Unlock()
+	setPrefix(FATAL)
+	logger.Fatalf(format, v...)
 }

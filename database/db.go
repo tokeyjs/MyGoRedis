@@ -6,12 +6,14 @@ import (
 	"MyGoRedis/interface/resp"
 	"MyGoRedis/resp/reply"
 	"strings"
+	"sync"
 )
 
 type DB struct {
-	index  int
-	data   dict.Dict
-	aofAdd func(cmd CmdLine)
+	index   int
+	data    dict.Dict
+	expired sync.Map // map[string]int64 // 过期时间以毫秒为单位
+	aofAdd  func(cmd CmdLine)
 }
 
 type ExecFunc func(db *DB, args [][]byte) resp.Reply
