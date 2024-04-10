@@ -10,7 +10,7 @@ func makeRouter() map[string]CmdFunc {
 	routerMap := make(map[string]CmdFunc)
 	routerMap["exists"] = defaultFunc
 	routerMap["type"] = defaultFunc
-	routerMap["set"] = defaultFunc
+	routerMap["myset"] = defaultFunc
 	routerMap["setnx"] = defaultFunc
 	routerMap["get"] = defaultFunc
 	routerMap["getset"] = defaultFunc

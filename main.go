@@ -2,11 +2,8 @@ package main
 
 import (
 	"MyGoRedis/config"
+	"MyGoRedis/lib/basedatastruct"
 	"MyGoRedis/lib/logger"
-	"MyGoRedis/resp/handler"
-	"MyGoRedis/tcp"
-	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 )
 
@@ -42,12 +39,12 @@ func init() {
 func main() {
 
 	// 开启 服务
-	err := tcp.ListenAndServeWithSignal(
-		&tcp.Config{Address: fmt.Sprintf("%s:%d", config.Properties.Bind, config.Properties.Port)},
-		handler.MakeHandler(),
-	)
-	if err != nil {
-		logrus.Errorf("tcp start error: %v", err)
-	}
-
+	//err := tcp.ListenAndServeWithSignal(
+	//	&tcp.Config{Address: fmt.Sprintf("%s:%d", config.Properties.Bind, config.Properties.Port)},
+	//	handler.MakeHandler(),
+	//)
+	//if err != nil {
+	//	logrus.Errorf("tcp start error: %v", err)
+	//}
+	basedatastruct.Test_skip()
 }

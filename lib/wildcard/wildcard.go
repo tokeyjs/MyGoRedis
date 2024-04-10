@@ -47,7 +47,7 @@ type Pattern struct {
 	items []*item
 }
 
-// CompilePattern convert wildcard string to Pattern
+// CompilePattern convert wildcard mystring to Pattern
 func CompilePattern(src string) *Pattern {
 	items := make([]*item, 0)
 	escape := false
@@ -100,7 +100,7 @@ func CompilePattern(src string) *Pattern {
 	}
 }
 
-// IsMatch returns whether the given string matches pattern
+// IsMatch returns whether the given mystring matches pattern
 func (p *Pattern) IsMatch(s string) bool {
 	if len(p.items) == 0 {
 		return len(s) == 0

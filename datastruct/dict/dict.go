@@ -17,5 +17,5 @@ type Dict interface {
 }
 
 type DbDataType interface {
-	// 支持 string list set hash zset
+	// 支持 mystring mylist myset myhash myzset
 }

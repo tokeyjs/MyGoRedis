@@ -3,24 +3,26 @@ package basedatastruct
 import (
 	"MyGoRedis/lib/logger"
 	"errors"
+	"sync"
+	"sync/atomic"
 )
 
-// 双向链表
+// 并发安全双向链表
 type BaseDLink struct {
-	size int32  // 链表大小
-	head *dNode // 头节点
-	tail *dNode // 尾节点
+	size   atomic.Int32 // 链表大小
+	head   *dNode       // 头节点
+	tail   *dNode       // 尾节点
+	rmutex sync.RWMutex
 }
 type dNode struct {
-	data     string // 元素值
-	next     *dNode // 上一个元素
-	previous *dNode //下一个元素
+	data string // 元素值
+	next *dNode // 上一个元素
+	prev *dNode //下一个元素
 }
 
 // 创建一个双链表
 func MakeDLink() *BaseDLink {
 	return &BaseDLink{
-		size: 0,
 		head: nil,
 		tail: nil,
 	}
@@ -28,16 +30,21 @@ func MakeDLink() *BaseDLink {
 
 // 链表是否为空
 func (link *BaseDLink) IsEmpty() bool {
-	return link.size == 0
+	return link.size.Load() == 0
 }
 
 // 获取长度
-func (link *BaseDLink) GetLen() int32 {
-	return link.size
+func (link *BaseDLink) Size() int32 {
+	return link.size.Load()
 }
 
 // 获取头元素
 func (link *BaseDLink) GetHeadVal() (string, error) {
+	link.rmutex.RLock()
+	defer link.rmutex.RUnlock()
+	return link.getHeadVal()
+}
+func (link *BaseDLink) getHeadVal() (string, error) {
 	if link.IsEmpty() {
 		return "", errors.New("the link is empty.")
 	}
@@ -46,6 +53,11 @@ func (link *BaseDLink) GetHeadVal() (string, error) {
 
 // 获取尾元素
 func (link *BaseDLink) GetTailVal() (string, error) {
+	link.rmutex.RLock()
+	defer link.rmutex.RUnlock()
+	return link.getTailVal()
+}
+func (link *BaseDLink) getTailVal() (string, error) {
 	if link.IsEmpty() {
 		return "", errors.New("the link is empty.")
 	}
@@ -54,50 +66,65 @@ func (link *BaseDLink) GetTailVal() (string, error) {
 
 // 添加元素 头插
 func (link *BaseDLink) AddElemHead(val string) error {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	return link.addElemHead(val)
+}
+func (link *BaseDLink) addElemHead(val string) error {
 	if link.IsEmpty() {
 		link.head = &dNode{
-			data:     val,
-			next:     nil,
-			previous: nil,
+			data: val,
+			next: nil,
+			prev: nil,
 		}
 		link.tail = link.head
 	} else {
 		oldHead := link.head
 		link.head = &dNode{
-			data:     val,
-			next:     oldHead,
-			previous: nil,
+			data: val,
+			next: oldHead,
+			prev: nil,
 		}
-		oldHead.previous = link.head
+		oldHead.prev = link.head
 	}
-	link.size++
+	link.size.Add(1)
 	return nil
 }
 
 // 添加元素 尾插
 func (link *BaseDLink) AddElemTail(val string) error {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	return link.addElemTail(val)
+}
+func (link *BaseDLink) addElemTail(val string) error {
 	if link.IsEmpty() {
 		link.head = &dNode{
-			data:     val,
-			next:     nil,
-			previous: nil,
+			data: val,
+			next: nil,
+			prev: nil,
 		}
 		link.tail = link.head
 	} else {
 		oldTail := link.tail
 		link.tail = &dNode{
-			data:     val,
-			next:     nil,
-			previous: oldTail,
+			data: val,
+			next: nil,
+			prev: oldTail,
 		}
 		oldTail.next = link.tail
 	}
-	link.size++
+	link.size.Add(1)
 	return nil
 }
 
 // 删除元素 头
 func (link *BaseDLink) DelElemHead() (string, error) {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	return link.delElemHead()
+}
+func (link *BaseDLink) delElemHead() (string, error) {
 	var val string
 	if link.IsEmpty() {
 		return "", errors.New("the link is empty")
@@ -111,22 +138,27 @@ func (link *BaseDLink) DelElemHead() (string, error) {
 			link.tail = nil
 		} else {
 			val = link.head.data
-			next.previous = nil
+			next.prev = nil
 			link.head = next
 		}
 	}
-	link.size--
+	link.size.Add(-1)
 	return val, nil
 }
 
 // 删除元素 尾
 func (link *BaseDLink) DelElemTail() (string, error) {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	return link.delElemTail()
+}
+func (link *BaseDLink) delElemTail() (string, error) {
 	var val string
 	if link.IsEmpty() {
 		return "", errors.New("the link is empty")
 	} else {
 		// 获取上一个元素
-		last := link.tail.previous
+		last := link.tail.prev
 		if last == nil {
 			// link只有一个元素
 			val = link.tail.data
@@ -138,28 +170,30 @@ func (link *BaseDLink) DelElemTail() (string, error) {
 			link.tail = last
 		}
 	}
-	link.size--
+	link.size.Add(-1)
 	return val, nil
 }
 
 // 插入元素 指定元素(第一个)前
 func (link *BaseDLink) InsertElemBefore(val string, secVal string) error {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
 	node := link.head
-	for i := int32(0); i < link.GetLen() && node != nil; i++ {
+	for i := int32(0); i < link.Size() && node != nil; i++ {
 		if node.data == secVal {
 			// 前一个元素
-			pre := node.previous
+			pre := node.prev
 			if pre == nil {
 				// 当前元素已经是head --> 进行头插
-				return link.AddElemHead(val)
+				return link.addElemHead(val)
 			} else {
 				pre.next = &dNode{
-					data:     val,
-					next:     node,
-					previous: pre,
+					data: val,
+					next: node,
+					prev: pre,
 				}
-				node.previous = pre.next
-				link.size++
+				node.prev = pre.next
+				link.size.Add(1)
 				return nil
 			}
 		} else {
@@ -171,22 +205,24 @@ func (link *BaseDLink) InsertElemBefore(val string, secVal string) error {
 
 // 插入元素 指定元素（第一个）后
 func (link *BaseDLink) InsertElemAfter(val string, secVal string) error {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
 	node := link.head
-	for i := int32(0); i < link.GetLen() && node != nil; i++ {
+	for i := int32(0); i < link.Size() && node != nil; i++ {
 		if node.data == secVal {
 			// 后一个元素
 			last := node.next
 			if last == nil {
 				// 当前元素已经是tail --> 进行尾插
-				return link.AddElemTail(val)
+				return link.addElemTail(val)
 			} else {
 				node.next = &dNode{
-					data:     val,
-					next:     last,
-					previous: node,
+					data: val,
+					next: last,
+					prev: node,
 				}
-				last.previous = node.next
-				link.size++
+				last.prev = node.next
+				link.size.Add(1)
 				return nil
 			}
 		} else {
@@ -198,27 +234,29 @@ func (link *BaseDLink) InsertElemAfter(val string, secVal string) error {
 
 // 删除指定元素 val 只删除从头搜索到的第一个元素
 func (link *BaseDLink) DelElemByVal(val string) error {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
 	if link.IsEmpty() {
 		return errors.New("the link is empty")
 	}
 	node := link.head
-	for i := int32(0); i < link.GetLen() && node != nil; i++ {
+	for i := int32(0); i < link.Size() && node != nil; i++ {
 		if node.data == val {
-			if node.previous == nil {
+			if node.prev == nil {
 				// 该元素是head --> 头删除
-				_, err := link.DelElemHead()
+				_, err := link.delElemHead()
 				return err
 			} else if node.next == nil {
 				// 该元素是tail --> 尾删除
-				_, err := link.DelElemTail()
+				_, err := link.delElemTail()
 				return err
 			} else {
 				// 该元素在中间
-				preNode := node.previous
+				preNode := node.prev
 				lastNode := node.next
 				preNode.next = lastNode
-				lastNode.previous = preNode
-				link.size--
+				lastNode.prev = preNode
+				link.size.Add(-1)
 				return nil
 			}
 		} else {
@@ -230,31 +268,35 @@ func (link *BaseDLink) DelElemByVal(val string) error {
 
 // 删除指定元素 index
 func (link *BaseDLink) DelElemByIndex(index int32) (string, error) {
-	if index >= link.size {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	if index >= link.Size() {
 		return "", errors.New("Index exceeds array maximum length")
 	}
 	if index == 0 {
 		// 头删
-		return link.DelElemHead()
-	} else if index == link.size-1 {
+		return link.delElemHead()
+	} else if index == link.Size()-1 {
 		// 尾删
-		return link.DelElemTail()
+		return link.delElemTail()
 	}
 	node := link.head
 	for i := int32(0); i < index; i++ {
 		node = node.next
 	}
-	preNode := node.previous
+	preNode := node.prev
 	lastNode := node.next
 	preNode.next = lastNode
-	lastNode.previous = preNode
-	link.size--
+	lastNode.prev = preNode
+	link.size.Add(-1)
 	return "", nil
 }
 
 // 修改指定索引元素值
 func (link *BaseDLink) ModElemByVal(index int32, newVal string) error {
-	if index >= link.size {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	if index >= link.Size() {
 		return errors.New("Index exceeds array maximum length")
 	}
 	node := link.head
@@ -267,7 +309,9 @@ func (link *BaseDLink) ModElemByVal(index int32, newVal string) error {
 
 // 获取指定索引元素值
 func (link *BaseDLink) GetElemByIndex(index int32) (string, error) {
-	if index >= link.size {
+	link.rmutex.RLock()
+	defer link.rmutex.RUnlock()
+	if index >= link.Size() {
 		return "", errors.New("Index exceeds array maximum length")
 	}
 	node := link.head
@@ -275,6 +319,52 @@ func (link *BaseDLink) GetElemByIndex(index int32) (string, error) {
 		node = node.next
 	}
 	return node.data, nil
+}
+
+// 从头删除 count个元素
+func (link *BaseDLink) DelFromBegin(count int32) {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	if count >= link.Size() {
+		link.clear()
+		return
+	}
+	node := link.head
+	for count > 0 {
+		node = node.next
+		count--
+	}
+	link.head = node
+	link.size.Add(-count)
+}
+
+// 从尾部删除count个元素
+func (link *BaseDLink) DelFromBack(count int32) {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	if count >= link.Size() {
+		link.clear()
+		return
+	}
+	node := link.tail
+	for count > 0 {
+		node = node.prev
+		count--
+	}
+	link.tail = node
+	link.size.Add(-count)
+}
+
+// 删除所有元素
+func (link *BaseDLink) Clear() {
+	link.rmutex.Lock()
+	defer link.rmutex.Unlock()
+	link.clear()
+}
+func (link *BaseDLink) clear() {
+	link.head = nil
+	link.tail = nil
+	link.size.Store(0)
 }
 
 // -- 测试功能
