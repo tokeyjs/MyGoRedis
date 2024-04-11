@@ -3,6 +3,8 @@ package database
 import (
 	_const "MyGoRedis/const"
 	"MyGoRedis/interface/resp"
+	"MyGoRedis/lib/utils"
+	"MyGoRedis/lib/wildcard"
 	"MyGoRedis/resp/reply"
 )
 
@@ -116,20 +118,22 @@ import (
 // 用法：DEL key [key ...]
 // 返回值：被删除键的数量。
 func exec_KEY_DEL(db *DB, args [][]byte) resp.Reply {
-	// todo
 	count := 0
 	for _, arg := range args {
 		count += db.Remove(string(arg))
 	}
-	return reply.MakeUnknownErrReply()
+	db.aofAdd(utils.ToCmdLine2("del", args...))
+	return reply.MakeIntReply(int64(count))
 }
 
 // 含义：检查给定键是否存在。
 // 用法：EXISTS key
 // 返回值：若键存在，则返回1，否则返回0。
 func exec_KEY_EXISTS(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	if db.IsExists(string(args[0])) {
+		return reply.MakeIntReply(1)
+	}
+	return reply.MakeIntReply(0)
 }
 
 // 含义：设置键的过期时间，单位为秒。
@@ -152,8 +156,15 @@ func exec_KEY_EXPIREAT(db *DB, args [][]byte) resp.Reply {
 // 用法：KEYS pattern
 // 返回值：符合模式的键组成的列表。
 func exec_KEY_KEYS(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	pattern := wildcard.CompilePattern(string(args[0]))
+	result := make([][]byte, 0)
+	db.data.Range(func(key any, val any) bool {
+		if pattern.IsMatch(key.(string)) {
+			result = append(result, []byte(key.(string)))
+		}
+		return true
+	})
+	return reply.MakeMultiBulkReply(result)
 }
 
 // 含义：将指定键移到另一个数据库。
@@ -169,7 +180,7 @@ func exec_KEY_MOVE(db *DB, args [][]byte) resp.Reply {
 // 返回值：若键成功移除过期时间，则返回1，否则返回0。
 func exec_KEY_PERSIST(db *DB, args [][]byte) resp.Reply {
 	// todo
-	return reply.MakeUnknownErrReply()
+	return reply.MakeIntReply(0)
 }
 
 // 含义：设置键的过期时间，单位为毫秒。
@@ -177,7 +188,7 @@ func exec_KEY_PERSIST(db *DB, args [][]byte) resp.Reply {
 // 返回值：若设置成功，则返回1，否则返回0。
 func exec_KEY_PEXPIRE(db *DB, args [][]byte) resp.Reply {
 	// todo
-	return reply.MakeUnknownErrReply()
+	return reply.MakeIntReply(0)
 }
 
 // 含义：设置键在指定的Unix时间戳（毫秒级）过期。
@@ -200,24 +211,46 @@ func exec_KEY_PTTL(db *DB, args [][]byte) resp.Reply {
 // 用法：RANDOMKEY
 // 返回值：随机键的名字，如果数据库为空，则返回nil。
 func exec_KEY_RANDOMKEY(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	sl := db.RandomKey(1)
+	if len(sl) <= 0 {
+		return reply.MakeNullBulkReply()
+	}
+	return reply.MakeBulkReply([]byte(sl[0]))
 }
 
 // 含义：将键重命名为新键名。
 // 用法：RENAME key newkey
 // 返回值：若重命名成功，则返回OK。
 func exec_KEY_RENAME(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	src := string(args[0])
+	dest := string(args[1])
+	entity, exists := db.GetEntity(src)
+	if !exists {
+		return reply.MakeStandardErrReply("no such key")
+	}
+	db.PutEntity(dest, entity)
+	db.Remove(src)
+	db.aofAdd(utils.ToCmdLine2("rename", args...))
+	return reply.MakeOkReply()
 }
 
 // 含义：仅当新键不存在时，将键重命名为新键名。
 // 用法：RENAMENX key newkey
 // 返回值：若重命名成功，则返回1，否则返回0。
 func exec_KEY_RENAMENX(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	src := string(args[0])
+	dest := string(args[1])
+	if _, ok := db.GetEntity(dest); ok {
+		return reply.MakeIntReply(0)
+	}
+	entity, exists := db.GetEntity(src)
+	if !exists {
+		return reply.MakeStandardErrReply("no such key")
+	}
+	db.PutEntity(dest, entity)
+	db.Remove(src)
+	db.aofAdd(utils.ToCmdLine2("renamenx", args...))
+	return reply.MakeIntReply(1)
 }
 
 // 含义：获取键的剩余过期时间，单位为秒。
@@ -232,8 +265,8 @@ func exec_KEY_TTL(db *DB, args [][]byte) resp.Reply {
 // 用法：TYPE key
 // 返回值：键的数据类型，包括"string"、"list"、"set"、"zset"、"hash"或"nil"（键不存在）。
 func exec_KEY_TYPE(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	key := string(args[0])
+	return reply.MakeBulkReply([]byte(db.KeyType(key)))
 }
 
 func init() {

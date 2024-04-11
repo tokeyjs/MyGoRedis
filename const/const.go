@@ -124,7 +124,7 @@ const (
 	TYPE_DATA_HASH   = "myhash"
 	TYPE_DATA_SET    = "myset"
 	TYPE_DATA_ZSET   = "myzset"
-	TYPE_DATA_NONE   = "none"
+	TYPE_DATA_NONE   = "nil"
 	TYPE_DATA_ANY    = "any" //以上几种类型都有可能
 )
 
