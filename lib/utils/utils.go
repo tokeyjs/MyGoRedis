@@ -1,5 +1,7 @@
 package utils
 
+import "strconv"
+
 // ToCmdLine convert strings to [][]byte
 func ToCmdLine(cmd ...string) [][]byte {
 	args := make([][]byte, len(cmd))
@@ -36,4 +38,18 @@ func BytesEquals(a []byte, b []byte) bool {
 		}
 	}
 	return true
+}
+
+// float64 to string
+func Float64ToString(val float64) string {
+	return strconv.FormatFloat(val, 'g', -1, 64)
+}
+
+// float64 to string
+func Float64ToByte(val float64) []byte {
+	return []byte(strconv.FormatFloat(val, 'g', -1, 64))
+}
+
+func StringToFloat64(val string) (float64, error) {
+	return strconv.ParseFloat(val, 64)
 }

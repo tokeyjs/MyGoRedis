@@ -12,13 +12,14 @@ import (
 
 // ServerProperties defines global config properties
 type ServerProperties struct {
-	Bind           string `cfg:"bind"`
-	Port           int    `cfg:"port"`
-	AppendOnly     bool   `cfg:"appendOnly"`
-	AppendFilename string `cfg:"appendFilename"`
-	MaxClients     int    `cfg:"maxclients"`
-	RequirePass    string `cfg:"requirepass"`
-	Databases      int    `cfg:"databases"`
+	Bind             string `cfg:"bind"`
+	Port             int    `cfg:"port"`
+	AppendOnly       bool   `cfg:"appendOnly"`
+	AppendFilename   string `cfg:"appendFilename"`
+	MaxClients       int    `cfg:"maxclients"`
+	RequirePass      string `cfg:"requirepass"`
+	Databases        int    `cfg:"databases"`
+	ClientTimeOutSec int    `cfg:"clienttimeoutsec"` //客户端最大空闲时间(空闲断连)
 
 	Peers []string `cfg:"peers"`
 	Self  string   `cfg:"self"`

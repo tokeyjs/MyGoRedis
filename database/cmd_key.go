@@ -122,7 +122,7 @@ func exec_KEY_DEL(db *DB, args [][]byte) resp.Reply {
 	for _, arg := range args {
 		count += db.Remove(string(arg))
 	}
-	db.aofAdd(utils.ToCmdLine2("del", args...))
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_DEL, args...))
 	return reply.MakeIntReply(int64(count))
 }
 
@@ -218,9 +218,9 @@ func exec_KEY_RANDOMKEY(db *DB, args [][]byte) resp.Reply {
 	return reply.MakeBulkReply([]byte(sl[0]))
 }
 
-// 含义：将键重命名为新键名。
+// 含义：将键重命名为新键名
 // 用法：RENAME key newkey
-// 返回值：若重命名成功，则返回OK。
+// 返回值：若重命名成功，则返回OK
 func exec_KEY_RENAME(db *DB, args [][]byte) resp.Reply {
 	src := string(args[0])
 	dest := string(args[1])
@@ -230,7 +230,7 @@ func exec_KEY_RENAME(db *DB, args [][]byte) resp.Reply {
 	}
 	db.PutEntity(dest, entity)
 	db.Remove(src)
-	db.aofAdd(utils.ToCmdLine2("rename", args...))
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_RENAME, args...))
 	return reply.MakeOkReply()
 }
 
@@ -249,7 +249,7 @@ func exec_KEY_RENAMENX(db *DB, args [][]byte) resp.Reply {
 	}
 	db.PutEntity(dest, entity)
 	db.Remove(src)
-	db.aofAdd(utils.ToCmdLine2("renamenx", args...))
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_RENAMENX, args...))
 	return reply.MakeIntReply(1)
 }
 

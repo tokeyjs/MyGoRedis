@@ -51,7 +51,7 @@ const (
 	CMD_STRING_MSET        = "mset"
 	CMD_STRING_MSETNX      = "msetnx"
 	CMD_STRING_PSETEX      = "psetex"
-	CMD_STRING_SET         = "myset"
+	CMD_STRING_SET         = "set"
 	CMD_STRING_SETEX       = "setex"
 	CMD_STRING_SETNX       = "setnx"
 	CMD_STRING_STRLEN      = "strlen"
@@ -89,7 +89,6 @@ const (
 	CMD_HASH_HVALS        = "hvals"
 
 	// set
-	CMD_SET_HVALS       = "hvals"
 	CMD_SET_SADD        = "sadd"
 	CMD_SET_SCARD       = "scard"
 	CMD_SET_SINTER      = "sinter"
@@ -119,11 +118,11 @@ const (
 
 // value数据类型
 const (
-	TYPE_DATA_STRING = "mystring"
-	TYPE_DATA_LIST   = "mylist"
-	TYPE_DATA_HASH   = "myhash"
-	TYPE_DATA_SET    = "myset"
-	TYPE_DATA_ZSET   = "myzset"
+	TYPE_DATA_STRING = "string"
+	TYPE_DATA_LIST   = "list"
+	TYPE_DATA_HASH   = "hash"
+	TYPE_DATA_SET    = "set"
+	TYPE_DATA_ZSET   = "zset"
 	TYPE_DATA_NONE   = "nil"
 	TYPE_DATA_ANY    = "any" //以上几种类型都有可能
 )

@@ -83,7 +83,7 @@ func (handler *AofHandler) loadAof() {
 		return
 	}
 	defer file.Close()
-	fakeConn := &connection.Connection{}
+	fakeConn := connection.NewFakeConn()
 	ch := parser.ParseStream(file)
 	for p := range ch {
 		if p.Err != nil {

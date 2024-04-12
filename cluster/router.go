@@ -3,7 +3,6 @@ package cluster
 import (
 	"MyGoRedis/interface/resp"
 	"MyGoRedis/resp/reply"
-	"github.com/sirupsen/logrus"
 )
 
 func makeRouter() map[string]CmdFunc {
@@ -27,8 +26,7 @@ func makeRouter() map[string]CmdFunc {
 // GET SET
 func defaultFunc(cluster *ClusterDatabase, c resp.Connection, cmdArgs [][]byte) resp.Reply {
 	key := string(cmdArgs[0])
-	peer := cluster.peerPicker.PickNode(key)
-	logrus.Infof("cmd run at peer:[%v]\n", peer)
+	peer, _ := cluster.peerPicker.PickNode(key)
 	return cluster.relay(peer, c, cmdArgs)
 }
 
@@ -50,8 +48,8 @@ func renameFunc(cluster *ClusterDatabase, c resp.Connection, cmdArgs [][]byte) r
 	src := string(cmdArgs[1])
 	dest := string(cmdArgs[2])
 	// TODO: 优化让处在不同节点也能成功
-	srcPeer := cluster.peerPicker.PickNode(src)
-	destPeer := cluster.peerPicker.PickNode(dest)
+	srcPeer, _ := cluster.peerPicker.PickNode(src)
+	destPeer, _ := cluster.peerPicker.PickNode(dest)
 	if srcPeer != destPeer {
 		return reply.MakeStandardErrReply("rename must within on peer")
 	}

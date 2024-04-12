@@ -1,10 +1,8 @@
 package database
 
 import (
-	"MyGoRedis/config"
 	_const "MyGoRedis/const"
 	"MyGoRedis/interface/resp"
-	"MyGoRedis/lib/utils"
 	"MyGoRedis/resp/reply"
 )
 
@@ -19,16 +17,16 @@ func exec_CONN_PING(db *DB, args [][]byte) resp.Reply {
 // 含义：用于对Redis服务器进行身份验证。通常在连接Redis服务器后，客户端需要使用AUTH命令提供的密码来进行身份验证。
 // 用法：AUTH password
 // 返回值：如果密码正确，服务器将返回OK，表示身份验证成功；如果密码错误，服务器将返回一个错误。
-func exec_CONN_AUTH(db *DB, args [][]byte) resp.Reply {
-	// TODO: 其他命令得被拦截
-	password := string(args[0])
-	if config.Properties.RequirePass == "" || password == config.Properties.RequirePass {
-		db.aofAdd(utils.ToCmdLine2("auth", args...))
-		// 认证成功
-		return reply.MakeOkReply()
-	}
-	return reply.MakeStandardErrReply("password error")
-}
+//func exec_CONN_AUTH(db *DB, args [][]byte) resp.Reply {
+//	// TODO: 其他命令得被拦截
+//	password := string(args[0])
+//	if config.Properties.RequirePass == "" || password == config.Properties.RequirePass {
+//		db.aofAdd(utils.ToCmdLine2(_const.CMD_CONN_AUTH, args...))
+//		// 认证成功
+//		return reply.MakeOkReply()
+//	}
+//	return reply.MakeStandardErrReply("password error")
+//}
 
 // 含义：用于在不执行任何操作的情况下返回给定的字符串。
 // 用法：ECHO message
@@ -48,7 +46,7 @@ func exec_CONN_ECHO(db *DB, args [][]byte) resp.Reply {
 func init() {
 	// 注册
 	RegisterCommand(_const.CMD_CONN_PING, exec_CONN_PING, 1)
-	RegisterCommand(_const.CMD_CONN_AUTH, exec_CONN_AUTH, 2)
+	//RegisterCommand(_const.CMD_CONN_AUTH, exec_CONN_AUTH, 2)
 	RegisterCommand(_const.CMD_CONN_ECHO, exec_CONN_ECHO, 2)
 	//RegisterCommand(_const.CMD_CONN_SELECT, exec_CONN_SELECT, 2)
 }

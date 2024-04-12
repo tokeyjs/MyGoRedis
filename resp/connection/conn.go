@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"MyGoRedis/config"
 	"MyGoRedis/lib/sync/wait"
 	"net"
 	"sync"
@@ -8,15 +9,63 @@ import (
 )
 
 type Connection struct {
-	conn         net.Conn
-	waitingReply wait.Wait
-	mutex        sync.Mutex
-	selectDB     int
+	conn            net.Conn
+	waitingReply    wait.Wait
+	mutex           sync.Mutex
+	selectDB        int   // 目前操作的db
+	isCF            bool  //是否进行认证
+	connTimeStamp   int64 //连接时的时间戳(s)
+	activeTimeStamp int64 //上次收到客户端命令时间戳(s)
+}
+
+func (c *Connection) UpdateConn() {
+	c.activeTimeStamp = time.Now().Unix()
+}
+
+func (c *Connection) IsCertification() bool {
+	return c.isCF
+}
+
+func (c *Connection) CheckAuth(password string) {
+	if len(config.Properties.RequirePass) <= 0 {
+		return
+	}
+	if config.Properties.RequirePass == password {
+		c.isCF = true
+	}
+}
+
+func (c *Connection) GetAge() int32 {
+	return int32(time.Now().Unix() - c.connTimeStamp)
+}
+
+func (c *Connection) GetIdle() int32 {
+	return int32(time.Now().Unix() - c.activeTimeStamp)
+}
+
+func (c *Connection) IsTimeOut() bool {
+	if config.Properties.ClientTimeOutSec == 0 {
+		return false
+	}
+	return c.GetIdle() > int32(config.Properties.ClientTimeOutSec)
 }
 
 func NewConn(conn net.Conn) *Connection {
 	return &Connection{
-		conn: conn,
+		conn:            conn,
+		isCF:            len(config.Properties.RequirePass) <= 0,
+		connTimeStamp:   time.Now().Unix(),
+		activeTimeStamp: time.Now().Unix(),
+	}
+}
+
+// 创建一个伪连接
+func NewFakeConn() *Connection {
+	return &Connection{
+		conn:            nil,
+		isCF:            true,
+		connTimeStamp:   time.Now().Unix(),
+		activeTimeStamp: time.Now().Unix(),
 	}
 }
 

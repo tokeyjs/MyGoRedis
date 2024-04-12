@@ -321,38 +321,86 @@ func (link *BaseDLink) GetElemByIndex(index int32) (string, error) {
 	return node.data, nil
 }
 
-// 从头删除 count个元素
-func (link *BaseDLink) DelFromBegin(count int32) {
+// 从头删除 count个 value元素
+func (link *BaseDLink) DelFromBegin(count int32, value string) int32 {
 	link.rmutex.Lock()
 	defer link.rmutex.Unlock()
-	if count >= link.Size() {
-		link.clear()
-		return
-	}
+	argCount := count
 	node := link.head
-	for count > 0 {
+	for node != nil && count > 0 {
+		if node.data == value {
+			if node.next == node.prev && node.next == nil {
+				// 只有一个元素了
+				link.head = nil
+				link.tail = nil
+				count--
+				break
+			} else if node.prev == nil {
+				// 处在头部
+				link.head = node.next
+				node = node.next
+				node.prev = nil
+				count--
+				continue
+			} else if node.next == nil {
+				// 处在尾部
+				link.tail = node.prev
+				link.tail.next = nil
+				count--
+				break
+			} else {
+				node = node.next
+				node.prev = node.prev.prev
+				node.prev.next = node
+				count--
+
+			}
+		}
 		node = node.next
-		count--
 	}
-	link.head = node
-	link.size.Add(-count)
+	link.size.Add(count - argCount)
+	return argCount - count
 }
 
-// 从尾部删除count个元素
-func (link *BaseDLink) DelFromBack(count int32) {
+// 从尾部删除count个 value元素
+func (link *BaseDLink) DelFromBack(count int32, value string) int32 {
 	link.rmutex.Lock()
 	defer link.rmutex.Unlock()
-	if count >= link.Size() {
-		link.clear()
-		return
-	}
+	argCount := count
 	node := link.tail
-	for count > 0 {
+	for node != nil && count > 0 {
+		if node.data == value {
+			// 只有一个元素了
+			if node.prev == node.next && node.next == nil {
+				count--
+				link.head = nil
+				link.tail = nil
+				break
+			} else if node.next == nil {
+				// 是尾
+				node = node.prev
+				link.tail = node
+				node.next = nil
+				count--
+				continue
+			} else if node.prev == nil {
+				// 是头
+				count--
+				link.head = node.next
+				link.head.prev = nil
+				break
+			} else {
+				// 既不是头也不是尾
+				node = node.prev
+				node.next = node.next.next
+				node.next.prev = node
+				count--
+			}
+		}
 		node = node.prev
-		count--
 	}
-	link.tail = node
-	link.size.Add(-count)
+	link.size.Add(count - argCount)
+	return argCount - count
 }
 
 // 删除所有元素

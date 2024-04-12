@@ -43,16 +43,16 @@ func (list *List) PushBegin(value string) error {
 }
 
 // 移除列表元素（从前面移除count个或从后面移除-count个或者移除全部）
-func (list *List) Remove(count int32) {
+func (list *List) Remove(count int32, value string) int32 {
 	if count == 0 {
-		// 移除全部
-		list.data.Clear()
+		// 移除全部value
+		return list.data.DelFromBegin(list.Size(), value)
 	} else if count > 0 {
 		// 从前面开始移除
-		list.data.DelFromBegin(count)
+		return list.data.DelFromBegin(count, value)
 	} else {
 		// 从后面开始移除
-		list.data.DelFromBack(-count)
+		return list.data.DelFromBack(-count, value)
 	}
 }
 

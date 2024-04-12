@@ -62,7 +62,7 @@ func ListenAndServe(
 			logrus.Errorf("accept error: %v", err)
 			break
 		}
-		logrus.Infof("new client connection: %v", conn.RemoteAddr().String())
+		logrus.Infof("new client[%v] connection.", conn.RemoteAddr().String())
 		// 处理新客户端
 		waitDone.Add(1)
 		go func() {

@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-const MaxH = 256
+const MaxH = 32
 
-// 跳表 （元素默认从大到小）
+// 跳表 （含头节点）（元素默认从大到小）（使用时确保不存在重复元素）
 type BaseSkipLink struct {
 	head      *skNode // 头节点（不包含数据）
 	tail      *skNode
@@ -37,8 +37,8 @@ func MakeSkipLink() *BaseSkipLink {
 }
 
 type Valtmp struct {
-	score float32
-	value string
+	Score float32
+	Value string
 }
 
 type skNode struct {
@@ -53,30 +53,13 @@ func (skip *BaseSkipLink) Size() int32 {
 	return skip.size.Load()
 }
 
-// 获取分数
-func (skip *BaseSkipLink) GetScore(value string) (float32, error) {
-	skip.rmutex.RLock()
-	defer skip.rmutex.RUnlock()
-	return skip.getScore(value)
-}
-func (skip *BaseSkipLink) getScore(value string) (float32, error) {
-	node := skip.head
-	for node.levelNext[0] != nil && node.levelNext[0].value != value {
-		node = node.levelNext[0]
-	}
-	if node.levelNext[0] == nil {
-		return 0, errors.New("not found")
-	}
-	return node.levelNext[0].score, nil
-}
-
 // 增加元素
-func (skip *BaseSkipLink) AddElem(value string, score float32) error {
+func (skip *BaseSkipLink) AddElem(value string, score float32) {
 	skip.rmutex.Lock()
 	defer skip.rmutex.Unlock()
-	return skip.addElem(value, score)
+	skip.addElem(value, score)
 }
-func (skip *BaseSkipLink) addElem(value string, score float32) error {
+func (skip *BaseSkipLink) addElem(value string, score float32) {
 	node := skip.head
 	// 获取随机高度
 	rh := skip.randomHeight()
@@ -97,57 +80,69 @@ func (skip *BaseSkipLink) addElem(value string, score float32) error {
 			node = node.levelNext[i]
 		}
 		last := node.levelNext[i]
-		node.levelNext[i] = newNode
-		newNode.prev = node
-		newNode.levelNext[i] = last
-	}
-	skip.size.Add(1)
-	return nil
-}
-
-// 删除指定元素
-func (skip *BaseSkipLink) DelElem(value string) error {
-	skip.rmutex.Lock()
-	defer skip.rmutex.Unlock()
-	return skip.delElem(value)
-}
-func (skip *BaseSkipLink) delElem(value string) error {
-	node := skip.head
-	for node.levelNext[0] != nil && node.levelNext[0].value != value {
-		node = node.levelNext[0]
-	}
-	if node.levelNext[0] == nil {
-		// 没有此元素 无法进行删除
-		return errors.New("not found elem, delete failed")
-	}
-	node = node.levelNext[0]
-	// 将下一个节点的prev赋值
-	if node.levelNext[0] != nil {
-		node.levelNext[0].prev = node.prev
-	}
-	// 将levelNext赋值跳过node
-	tmpNode := node.prev
-	for i := 0; i < len(node.levelNext); {
-		if i < len(tmpNode.levelNext) && tmpNode.levelNext[i] != nil {
-			tmpNode.levelNext[i] = node.levelNext[i]
-			i++
+		if last == nil {
+			node.levelNext[i] = newNode
+			newNode.prev = node
+			newNode.levelNext[i] = last
 		} else {
-			tmpNode = tmpNode.prev
+			node.levelNext[i] = newNode
+			newNode.prev = node
+			newNode.levelNext[i] = last
+			last.prev = newNode
 		}
 	}
-	skip.size.Add(-1)
-	return nil
+	skip.size.Add(1)
 }
 
+// 删除指定元素 删除成功为true
+func (skip *BaseSkipLink) DelElem(value string, score float32) bool {
+	skip.rmutex.Lock()
+	defer skip.rmutex.Unlock()
+	return skip.delElem(value, score)
+}
+func (skip *BaseSkipLink) delElem(value string, score float32) bool {
+	// 搜索节点
+	node := skip.secNode(value, score)
+	if node == nil {
+		return false
+	}
+	// 将指向该节点的所有指针替换
+	// 该元素为尾节点
+	if node.levelNext[0] == nil {
+		h := len(node.levelNext) - 1
+		tmpNode := skip.head
+		for ; h >= 0; h-- {
+			for tmpNode.levelNext[h] != node {
+				tmpNode = tmpNode.levelNext[h]
+			}
+			tmpNode.levelNext[h] = nil
+		}
+		skip.tail = node.prev
+	} else {
+		h := len(node.levelNext) - 1
+		tmpNode := skip.head
+		for ; h >= 0; h-- {
+			for tmpNode.levelNext[h] != node {
+				tmpNode = tmpNode.levelNext[h]
+			}
+			tmpNode.levelNext[h] = node.levelNext[h]
+		}
+		node.levelNext[0].prev = node.prev
+	}
+	skip.size.Add(-1)
+	return true
+}
+
+// 搜索指定节点 （非并发安全）
 func (skip *BaseSkipLink) secNode(value string, score float32) *skNode {
 	// 搜索value的node节点
-	h := skip.maxHeight.Load()
+	h := skip.maxHeight.Load() - 1
 	node := skip.head
 	for ; h >= 0; h-- {
 		for node.levelNext[h] != nil && node.levelNext[h].score > score {
 			node = node.levelNext[h]
 		}
-		if node.levelNext[h] == nil {
+		if node.levelNext[h] == nil || node.levelNext[h].score < score {
 			continue
 		}
 		if node.levelNext[h].score == score {
@@ -170,8 +165,8 @@ func (skip *BaseSkipLink) GetAllElem() ([]*Valtmp, error) {
 	node := skip.head
 	for node.levelNext[0] != nil {
 		res = append(res, &Valtmp{
-			score: node.levelNext[0].score,
-			value: node.levelNext[0].value,
+			Score: node.levelNext[0].score,
+			Value: node.levelNext[0].value,
 		})
 		node = node.levelNext[0]
 	}
@@ -183,6 +178,21 @@ func (skip *BaseSkipLink) GetScoreRangeElem(minScore, maxScore float32) ([]*Valt
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
 	res := make([]*Valtmp, 0)
+	// 获取元素
+	elems, err := skip.getScoreRangeElem(minScore, maxScore)
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range elems {
+		res = append(res, &Valtmp{
+			Score: node.score,
+			Value: node.value,
+		})
+	}
+	return res, nil
+}
+func (skip *BaseSkipLink) getScoreRangeElem(minScore, maxScore float32) ([]*skNode, error) {
+	res := make([]*skNode, 0)
 	if minScore > maxScore {
 		return nil, errors.New("minScore >= maxScore")
 	}
@@ -200,21 +210,34 @@ func (skip *BaseSkipLink) GetScoreRangeElem(minScore, maxScore float32) ([]*Valt
 		} else if node.levelNext[0].score < minScore {
 			break
 		} else {
-			res = append(res, &Valtmp{
-				score: node.levelNext[0].score,
-				value: node.levelNext[0].value,
-			})
+			res = append(res, node.levelNext[0])
 			node = node.levelNext[0]
 		}
 	}
 	return res, nil
 }
 
-// 返回指定排名(0-n)(从大到小排)之间的元素 [ ]
-func (skip *BaseSkipLink) GetRankElem(minRank, maxRank int32) ([]*Valtmp, error) {
+// 返回指定排名(0-n)(从大到小排)之间的元素 [ ]: 后续可以进行优化span
+func (skip *BaseSkipLink) GetRankRangeElem(minRank, maxRank int32) ([]*Valtmp, error) {
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
 	res := make([]*Valtmp, 0)
+	elem, err := skip.getRankRangeElem(minRank, maxRank)
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range elem {
+		res = append(res, &Valtmp{
+			Score: node.score,
+			Value: node.value,
+		})
+	}
+	return res, nil
+}
+func (skip *BaseSkipLink) getRankRangeElem(minRank, maxRank int32) ([]*skNode, error) {
+	skip.rmutex.RLock()
+	defer skip.rmutex.RUnlock()
+	res := make([]*skNode, 0)
 	if minRank > maxRank {
 		return nil, errors.New("minScore >= maxScore")
 	}
@@ -226,10 +249,7 @@ func (skip *BaseSkipLink) GetRankElem(minRank, maxRank int32) ([]*Valtmp, error)
 		} else if idx < minRank {
 			node = node.levelNext[0]
 		} else {
-			res = append(res, &Valtmp{
-				score: node.levelNext[0].score,
-				value: node.levelNext[0].value,
-			})
+			res = append(res, node.levelNext[0])
 			node = node.levelNext[0]
 		}
 		idx++
@@ -237,7 +257,7 @@ func (skip *BaseSkipLink) GetRankElem(minRank, maxRank int32) ([]*Valtmp, error)
 	return res, nil
 }
 
-// 获取指定元素索引(排名)
+// 获取指定元素索引(排名)O(n) : 暂时未优化，加上span会降低时间复杂度至O(logn)
 func (skip *BaseSkipLink) GetIndexElem(value string) (int32, error) {
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
@@ -253,118 +273,92 @@ func (skip *BaseSkipLink) GetIndexElem(value string) (int32, error) {
 }
 
 // 更新成员分数
-func (skip *BaseSkipLink) UpdateScoreElem(value string, score float32) error {
+func (skip *BaseSkipLink) UpdateScoreElem(value string, srcScore float32, destScore float32) error {
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
-	node := skip.head
-	for node.levelNext[0] != nil {
-		if node.levelNext[0].value == value {
-			oldScore := node.levelNext[0].score
-			node.levelNext[0].score = score
-			if err := skip.deal(node.levelNext[0]); err != nil {
-				node.levelNext[0].score = oldScore
-				return err
-			}
-			return nil
-		}
-		node = node.levelNext[0]
+	node := skip.secNode(value, srcScore)
+	if node == nil {
+		return errors.New("not found")
 	}
-	return errors.New("not found")
+	node.score = destScore
+	// 调整位置
+	skip.deal(node)
+	return nil
 }
 
 // 为node找到新位置（调整跳表）
-func (skip *BaseSkipLink) deal(node *skNode) error {
+func (skip *BaseSkipLink) deal(node *skNode) {
 	// 情况不需要更新: 处于头位置正确，处于尾位置正确，处于中间位置正确
 	if (skip.Size() == 1) || (node.prev == skip.head && node.levelNext[0].score <= node.score) ||
 		(node.levelNext[0] == nil && node.prev.score >= node.score) ||
 		(node.prev != skip.head && node.levelNext[0] != nil && node.prev.score >= node.score && node.levelNext[0].score <= node.score) {
-		return nil
+		return
 	}
-	// 删除节点插入节点
-	if err := skip.delElem(node.value); err != nil {
-		return errors.New("modify error")
-	}
-	// 插入节点
-	if err := skip.addElem(node.value, node.score); err != nil {
-		return errors.New("modify error")
-	}
-	return nil
+	//删除再插入
+	skip.delElem(node.value, node.score)
+	skip.addElem(node.value, node.score)
 }
 
-// 删除指定排名范围的成员
-func (skip *BaseSkipLink) RemoveRangeRank(rankStart, rankEnd int32) {
-	// todo
+// 删除指定排名范围的成员：TODO 后续优化
+func (skip *BaseSkipLink) RemoveRangeRank(rankStart, rankEnd int32) int32 {
+	if rankStart > rankEnd {
+		return 0
+	}
+	// 获取成员
+	slice, err := skip.getRankRangeElem(rankStart, rankEnd)
+	if err != nil {
+		return 0
+	}
+	for _, node := range slice {
+		skip.delElem(node.value, node.score)
+	}
+	return int32(len(slice))
 }
 
-// 删除指定分数区间的成员
-func (skip *BaseSkipLink) RemoveRangeScore(minScore, maxScore float32) {
-	// todo
-	// 快速接近
-
-	// 查找max第一个元素
-
-	// 查找区间最后一个元素
-
+// 删除指定分数区间的成员： TODO 后续优化
+func (skip *BaseSkipLink) RemoveRangeScore(minScore, maxScore float32) int32 {
+	if minScore > maxScore {
+		return 0
+	}
+	// 获取成员
+	slice, err := skip.getScoreRangeElem(minScore, maxScore)
+	if err != nil {
+		return 0
+	}
+	for _, node := range slice {
+		skip.delElem(node.value, node.score)
+	}
+	return int32(len(slice))
 }
 
 // 获取一个随机高度
 func (skip *BaseSkipLink) randomHeight() int32 {
-	baseH := int32(1)
-	for true {
-		if baseH == MaxH {
-			break
-		}
-		rand.Seed(time.Now().UnixNano())
-		randomNum := rand.Intn(99) % 2
-		if randomNum == 0 {
-			break
-		}
-		baseH++
-	}
-	return baseH
+	rand.Seed(time.Now().UnixNano())
+	randomNum := rand.Intn(MaxH)
+	return int32(randomNum)
 }
 
 // 统计分数区间人数数量
 func (skip *BaseSkipLink) CountRangeScore(scoreMin, scoreMax float32) int32 {
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
-	if skip.Size() == 0 || scoreMin > skip.head.levelNext[0].score || scoreMax < skip.tail.score {
+	elem, err := skip.getScoreRangeElem(scoreMin, scoreMax)
+	if err != nil {
 		return 0
 	}
-	node := skip.head
-	// 快速接近
-	h := skip.maxHeight.Load() - 1
-	for ; h >= 0; h-- {
-		if node.levelNext[h] != nil && node.levelNext[h].score > scoreMax {
-			node = node.levelNext[h]
-		}
-	}
-	num := int32(0)
-	for node.levelNext[0] != nil {
-		if node.levelNext[0].score < scoreMin {
-			return num
-		}
-		if node.levelNext[0].score >= scoreMin && node.levelNext[0].score <= scoreMax {
-			num++
-		}
-		node = node.levelNext[0]
-	}
-	return num
+	return int32(len(elem))
 }
 
 // 对指定成员score加增量
-func (skip *BaseSkipLink) Incr(value string, incr float32) error {
+func (skip *BaseSkipLink) Incr(value string, score float32, incr float32) error {
 	skip.rmutex.Lock()
 	defer skip.rmutex.Unlock()
-	node := skip.head
-	for node.levelNext[0] != nil && node.levelNext[0].value != value {
-		node = node.levelNext[0]
+	node := skip.secNode(value, score)
+	if node == nil {
+		return errors.New("not found")
 	}
-	if node.levelNext[0] != nil {
-		node.levelNext[0].score += incr
-		return nil
-	}
-	return errors.New("not found")
+	node.score += incr
+	return nil
 }
 
 func Show_skip(sk *BaseSkipLink) {
@@ -374,31 +368,11 @@ func Show_skip(sk *BaseSkipLink) {
 	}
 	logger.Info("SHOW")
 	for _, v := range res {
-		logger.Infof("value:%v score:%v", v.value, v.score)
+		logger.Infof("value:%v Score:%v", v.Value, v.Score)
 	}
 }
 
 // 测试
 func Test_skip() {
-	sk := MakeSkipLink()
-	sk.AddElem("a", 1234)
-	Show_skip(sk)
-	sk.AddElem("b", 124)
-	Show_skip(sk)
-	sk.AddElem("c", 7234)
-	Show_skip(sk)
-	sk.AddElem("d", 1264)
-	Show_skip(sk)
-	sk.DelElem("c")
-	Show_skip(sk)
-	sk.UpdateScoreElem("d", 9.0)
-	Show_skip(sk)
-	sk.AddElem("tt1", -9.4)
-	Show_skip(sk)
-	sk.AddElem("b1", 124)
-	Show_skip(sk)
-	sk.AddElem("c1", 7234)
-	Show_skip(sk)
-	sk.AddElem("d1", 1264)
-	Show_skip(sk)
+
 }

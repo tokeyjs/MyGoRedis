@@ -18,9 +18,13 @@ func MakeHash() *Hash {
 }
 
 // 删除一个字段
-func (h *Hash) DelFiled(field string) {
+func (h *Hash) DelFiled(field string) int32 {
+	if !h.IsExists(field) {
+		return 0
+	}
 	delete(h.data, field)
 	h.size--
+	return 1
 }
 
 // 查看指定的字段是否存在
@@ -37,18 +41,18 @@ func (h *Hash) Get(field string) (string, bool) {
 
 // 获取所有字段和值
 func (h *Hash) GetAllKV() []struct {
-	field string
-	value string
+	Field string
+	Value string
 } {
 	slic := make([]struct {
-		field string
-		value string
+		Field string
+		Value string
 	}, 0, h.size)
 	for k, v := range h.data {
 		slic = append(slic, struct {
-			field string
-			value string
-		}{field: k, value: v})
+			Field string
+			Value string
+		}{Field: k, Value: v})
 	}
 	return slic
 }
@@ -91,9 +95,16 @@ func (h *Hash) Modify(field string, value string) {
 }
 
 // 新增字段值及value
-func (h *Hash) Set(field string, value string) {
-	h.data[field] = value
-	h.size++
+func (h *Hash) Set(field string, value string) int32 {
+	if h.IsExists(field) {
+		h.data[field] = value
+		return 0
+	} else {
+		h.data[field] = value
+		h.size++
+		return 1
+	}
+
 }
 
 // 获取所有值

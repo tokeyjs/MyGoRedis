@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"MyGoRedis/interface/resp"
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/lib/utils"
 	"MyGoRedis/resp/client"
 	"MyGoRedis/resp/reply"
@@ -38,6 +39,7 @@ func (cluster *ClusterDatabase) returnPeerClient(peer string, peerClient *client
 
 // 转发命令到集群指定节点中执行
 func (cluster *ClusterDatabase) relay(peer string, c resp.Connection, args [][]byte) resp.Reply {
+	logger.Infof("cmd[%v] run at peer:[%v]", string(args[0]), peer)
 	if peer == cluster.self {
 		return cluster.db.Exec(c, args)
 	}

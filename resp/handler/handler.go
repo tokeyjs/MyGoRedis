@@ -22,6 +22,7 @@ type RespHandler struct {
 	activeConn sync.Map
 	db         databaseface.DataBase
 	closing    atomic.Bool
+	connNum    atomic.Int32 // 连接数量
 }
 
 func MakeHandler() *RespHandler {
@@ -41,16 +42,22 @@ func MakeHandler() *RespHandler {
 }
 
 func (r *RespHandler) closeClient(client *connection.Connection) {
+	r.connNum.Add(-1)
 	_ = client.Close()
 	r.db.AfterClientClose(client)
 	r.activeConn.Delete(client)
 }
 
+func (r *RespHandler) clientNum() int32 {
+	return r.connNum.Load()
+}
+
 func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
-	if r.closing.Load() {
+	if r.closing.Load() || (config.Properties.MaxClients != 0 && r.clientNum() > int32(config.Properties.MaxClients)) {
 		_ = conn.Close()
 		return
 	}
+	r.connNum.Add(1)
 	client := connection.NewConn(conn)
 	r.activeConn.Store(client, struct{}{})
 	ch := parser.ParseStream(conn)

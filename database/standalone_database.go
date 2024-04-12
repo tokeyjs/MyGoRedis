@@ -3,6 +3,7 @@ package database
 import (
 	"MyGoRedis/aof"
 	"MyGoRedis/config"
+	_const "MyGoRedis/const"
 	"MyGoRedis/interface/resp"
 	"MyGoRedis/resp/reply"
 	"github.com/sirupsen/logrus"
@@ -51,7 +52,20 @@ func (database *StandaloneDatabase) Exec(client resp.Connection, args [][]byte) 
 		}
 	}()
 	cmdName := strings.ToLower(string(args[0]))
-	if cmdName == "select" {
+	// 判断该连接是否进行认证
+	if !client.IsCertification() {
+		if cmdName == _const.CMD_CONN_AUTH {
+			// 进行认证
+			if len(args) != 2 {
+				return reply.MakeArgNumErrReply("auth")
+			}
+			return execAUTH(client, database, args[1:])
+		} else {
+			// 返回错误
+			return reply.MakeStandardErrReply("NOAUTH Authentication required.")
+		}
+	}
+	if cmdName == _const.CMD_CONN_SELECT {
 		if len(args) != 2 {
 			return reply.MakeArgNumErrReply("select")
 		}
@@ -78,4 +92,13 @@ func execSelect(c resp.Connection, database *StandaloneDatabase, args [][]byte) 
 	}
 	c.SelectDB(dbIndex)
 	return reply.MakeOkReply()
+}
+
+func execAUTH(c resp.Connection, database *StandaloneDatabase, args [][]byte) resp.Reply {
+	password := string(args[0])
+	c.CheckAuth(password)
+	if c.IsCertification() {
+		return reply.MakeOkReply()
+	}
+	return reply.MakeStandardErrReply("password error")
 }

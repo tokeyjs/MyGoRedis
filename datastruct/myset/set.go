@@ -15,8 +15,8 @@ func MakeSet() *Set {
 }
 
 // 向集合添加一个成员
-func (s *Set) Add(data string) {
-	s.data.Insert(data)
+func (s *Set) Add(data string) int32 {
+	return s.data.Insert(data)
 }
 
 // 获取集合的成员数
@@ -43,8 +43,8 @@ func (s *Set) GetRandom(n int32) []string {
 }
 
 // 移除集合中一个成员
-func (s *Set) Remove(data string) {
-	s.data.Remove(data)
+func (s *Set) Remove(data string) int32 {
+	return s.data.Remove(data)
 }
 
 // todo :集合操作

@@ -16,15 +16,23 @@ func MakeBaseSet() *BaseSet {
 }
 
 // 插入
-func (s *BaseSet) Insert(val string) {
+func (s *BaseSet) Insert(val string) int32 {
+	if s.IsExists(val) {
+		return 0
+	}
 	s.data.Store(val, struct{}{})
 	s.size.Add(1)
+	return 1
 }
 
 // 删除
-func (s *BaseSet) Remove(val string) {
+func (s *BaseSet) Remove(val string) int32 {
+	if s.IsExists(val) {
+		return 0
+	}
 	s.data.Delete(val)
 	s.size.Add(-1)
+	return 1
 }
 
 // 清空
