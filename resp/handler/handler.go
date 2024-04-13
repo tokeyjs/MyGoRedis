@@ -10,7 +10,6 @@ import (
 	"MyGoRedis/resp/parser"
 	"MyGoRedis/resp/reply"
 	"context"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"strings"
@@ -30,11 +29,11 @@ func MakeHandler() *RespHandler {
 	if len(config.Properties.Self) > 0 && len(config.Properties.Peers) > 0 {
 		// 启动集群版redis
 		db = cluster.MakeClusterDatabase()
-		logrus.Infof("redis 集群版启动...")
+		logger.Infof("mygoredis 集群版启动 bind:[%v:%v] peers:[%v]...", config.Properties.Bind, config.Properties.Port, config.Properties.Peers)
 	} else {
 		// 单机版redis
 		db = database.NewStandaloneDatabase()
-		logrus.Infof("redis 单机版启动...")
+		logger.Infof("mygoredis 单机版启动 bind:[%v:%v]...", config.Properties.Bind, config.Properties.Port)
 	}
 	return &RespHandler{
 		db: db,
@@ -67,7 +66,7 @@ func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
 			if payload.Err == io.EOF || payload.Err == io.ErrUnexpectedEOF ||
 				strings.Contains(payload.Err.Error(), "use of close network connection") {
 				r.closeClient(client)
-				logrus.Infof("connection closed: %v", client.RemoteAddr().String())
+				logger.Infof("connection closed: %v", client.RemoteAddr().String())
 				return
 			}
 			// protocol error
@@ -75,7 +74,7 @@ func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
 			err := client.Write(errReply.ToBytes())
 			if err != nil {
 				r.closeClient(client)
-				logrus.Infof("connection closed: %v", client.RemoteAddr().String())
+				logger.Infof("connection closed: %v", client.RemoteAddr().String())
 				return
 			}
 			continue
@@ -87,7 +86,7 @@ func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
 		}
 		reply_, ok := payload.Data.(*reply.MultiBulkReply)
 		if !ok {
-			logrus.Error("require multi bulk reply")
+			logger.Error("require multi bulk reply")
 			continue
 		}
 		result := r.db.Exec(client, reply_.Args)

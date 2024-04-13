@@ -6,10 +6,10 @@ import (
 	databaseface "MyGoRedis/interface/database"
 	"MyGoRedis/interface/resp"
 	"MyGoRedis/lib/consistenthash"
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/resp/reply"
 	"context"
 	pool "github.com/jolestar/go-commons-pool/v2"
-	"github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -50,7 +50,7 @@ func MakeClusterDatabase() *ClusterDatabase {
 func (cDB *ClusterDatabase) Exec(client resp.Connection, args [][]byte) (result resp.Reply) {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("panic: %v", err)
+			logger.Errorf("panic: %v", err)
 			result = reply.MakeUnknownErrReply()
 		}
 	}()

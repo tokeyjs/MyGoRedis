@@ -1,8 +1,8 @@
 package config
 
 import (
+	"MyGoRedis/lib/logger"
 	"bufio"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"reflect"
@@ -56,7 +56,7 @@ func parse(src io.Reader) *ServerProperties {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	// parse format

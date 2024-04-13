@@ -13,88 +13,6 @@ import (
 	"sync"
 )
 
-//type DB struct {
-//	index   int
-//	Data    dict.Dict
-//	expired sync.Map // map[mystring]int64 // 过期时间以毫秒为单位
-//	aofAdd  func(cmd CmdLine)
-//}
-//
-//type ExecFunc func(db *DB, args [][]byte) resp.Reply
-//
-//type CmdLine = [][]byte
-//
-//func makeDB() *DB {
-//	return &DB{
-//		Data: dict.MakeSyncDict(),
-//		aofAdd: func(cmd CmdLine) {
-//			// 空实现：aof数据恢复阶段
-//		},
-//	}
-//}
-//func (db *DB) Exec(c resp.Connection, cmdLine CmdLine) resp.Reply {
-//	cmdName := strings.ToLower(mystring(cmdLine[0]))
-//	cmd, ok := cmdTable[cmdName]
-//	if !ok {
-//		return reply.MakeStandardErrReply("ERR unknown command " + cmdName)
-//	}
-//	if !validArity(cmd.arity, cmdLine) {
-//		return reply.MakeArgNumErrReply(cmdName)
-//	}
-//	return cmd.exector(db, cmdLine[1:])
-//}
-//
-//// SET k v -> arity = 3 定长
-//// EXIST k1 k2 arity = -2 变长 ：至少为2个
-//func validArity(arity int, cmdArgs [][]byte) bool {
-//	argNum := len(cmdArgs)
-//	if arity >= 0 {
-//		return argNum == arity
-//	}
-//	return argNum >= -arity
-//}
-//
-//func (db *DB) GetEntity(key mystring) (*database.DataEntity, bool) {
-//	raw, ok := db.Data.Get(key)
-//	if !ok {
-//		return nil, false
-//	}
-//	entity, _ := raw.(*database.DataEntity)
-//	return entity, true
-//}
-//
-//func (db *DB) PutEntity(key mystring, entity *database.DataEntity) int {
-//	return db.Data.Put(key, entity)
-//}
-//
-//func (db *DB) PutIfExists(key mystring, entity *database.DataEntity) int {
-//	return db.Data.PutIfExists(key, entity)
-//}
-//
-//func (db *DB) PutIfAbsent(key mystring, entity *database.DataEntity) int {
-//	return db.Data.PutIfAbsent(key, entity)
-//}
-//
-//func (db *DB) Remove(key mystring) int {
-//	return db.Data.Remove(key)
-//}
-//
-//func (db *DB) Removes(keys ...mystring) int {
-//	deleted := 0
-//	for _, key := range keys {
-//		_, exists := db.Data.Get(key)
-//		if exists {
-//			db.Remove(key)
-//			deleted++
-//		}
-//	}
-//	return deleted
-//}
-//
-//func (db *DB) Flush() {
-//	db.Data.Clear()
-//}
-
 type DB struct {
 	index   int
 	data    sync.Map //map[string]interface{}   --> interface{}是各种类型的指针
@@ -229,4 +147,5 @@ func (db *DB) RandomKey(count int32) []string {
 // 清空元素
 func (db *DB) Flush() {
 	db.data = sync.Map{}
+	db.expired = sync.Map{}
 }

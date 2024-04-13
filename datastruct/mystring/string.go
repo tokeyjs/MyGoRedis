@@ -117,3 +117,16 @@ func (s *String) AppendStr(str string) int32 {
 	s.data = s.data + str
 	return int32(len(s.data))
 }
+
+// 截取子字符串
+func (s *String) GetRange(startIdx, endIdx int32) string {
+	s.rmutex.RLock()
+	defer s.rmutex.RUnlock()
+	if endIdx == -1 || endIdx >= int32(len(s.data)) {
+		endIdx = int32(len(s.data))
+	}
+	if startIdx > endIdx || startIdx >= int32(len(s.data)) {
+		return ""
+	}
+	return s.data[startIdx:endIdx]
+}

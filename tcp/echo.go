@@ -1,10 +1,10 @@
 package tcp
 
 import (
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/lib/sync/wait"
 	"bufio"
 	"context"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"sync"
@@ -50,9 +50,9 @@ func (handler *EchoHandler) Handle(ctx context.Context, conn net.Conn) {
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				logrus.Infof("client[%v] disconnection :%v", conn.RemoteAddr().String(), err)
+				logger.Infof("client[%v] disconnection :%v", conn.RemoteAddr().String(), err)
 			} else {
-				logrus.Warnf("client[%v] error: %v", conn.RemoteAddr().String(), err)
+				logger.Warnf("client[%v] error: %v", conn.RemoteAddr().String(), err)
 			}
 			_ = client.Close()
 			handler.activeConn.Delete(client)
@@ -60,7 +60,7 @@ func (handler *EchoHandler) Handle(ctx context.Context, conn net.Conn) {
 		}
 		// 处理业务
 		client.Waiting.Add(1)
-		logrus.Infof("client[%v]:%v", client.Conn.RemoteAddr().String(), msg)
+		logger.Infof("client[%v]:%v", client.Conn.RemoteAddr().String(), msg)
 		_, _ = client.Conn.Write([]byte(msg))
 		client.Waiting.Done()
 	}
@@ -68,7 +68,7 @@ func (handler *EchoHandler) Handle(ctx context.Context, conn net.Conn) {
 }
 
 func (handler *EchoHandler) Close() error {
-	logrus.Infof("handler shutting down")
+	logger.Infof("handler shutting down")
 	handler.closing.Store(true)
 	// 将连接依次关闭
 	handler.activeConn.Range(func(key, value any) bool {

@@ -11,11 +11,14 @@ import (
 
 // 实现命令
 
+// 检查完成
+
 // 含义：向集合中添加一个或多个成员。
 // 用法：SADD key member1 [member2 ...]
 // 返回值：添加到集合中的新元素的数量，不包括已经存在于集合中的元素。
 func exec_SET_SADD(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SET_SADD, args...))
 	var typeSet *myset.Set
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -36,6 +39,7 @@ func exec_SET_SADD(db *DB, args [][]byte) resp.Reply {
 		}
 		index++
 	}
+	db.PutEntity(key, typeSet)
 	return reply.MakeIntReply(int64(count))
 }
 
@@ -50,7 +54,6 @@ func exec_SET_SCARD(db *DB, args [][]byte) resp.Reply {
 	}
 	typeSet := _const.DataToSET(it)
 	if typeSet == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	return reply.MakeIntReply(int64(typeSet.Size()))
@@ -69,6 +72,7 @@ func exec_SET_SINTER(db *DB, args [][]byte) resp.Reply {
 // 返回值：存储到目标集合的元素数量。
 func exec_SET_SINTERSTORE(db *DB, args [][]byte) resp.Reply {
 	// todo
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SET_SINTERSTORE, args...))
 	return reply.MakeUnknownErrReply()
 }
 
@@ -115,6 +119,7 @@ func exec_SET_SMEMBERS(db *DB, args [][]byte) resp.Reply {
 // 返回值：如果成员成功移动，则返回1；如果成员不存在于源集合中，则返回0。
 func exec_SET_SMOVE(db *DB, args [][]byte) resp.Reply {
 	// todo
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SET_SMOVE, args...))
 	return reply.MakeUnknownErrReply()
 }
 
@@ -123,13 +128,13 @@ func exec_SET_SMOVE(db *DB, args [][]byte) resp.Reply {
 // 返回值：移除的成员。
 func exec_SET_SPOP(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SET_SPOP, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
 		return reply.MakeStandardErrReply("no key")
 	}
 	typeSet := _const.DataToSET(it)
 	if typeSet == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	str := typeSet.GetRandom(1)
@@ -145,7 +150,14 @@ func exec_SET_SPOP(db *DB, args [][]byte) resp.Reply {
 // 返回值：返回一个或多个随机成员，不移除成员。
 func exec_SET_SRANDMEMBER(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	var err error
 	count := 1
+	if len(args) == 2 {
+		count, err = strconv.Atoi(string(args[1]))
+		if err != nil {
+			return reply.MakeStandardErrReply("argment 'count' is not int")
+		}
+	}
 	if len(args) > 1 {
 		count, _ = strconv.Atoi(string(args[1]))
 	}
@@ -167,6 +179,7 @@ func exec_SET_SRANDMEMBER(db *DB, args [][]byte) resp.Reply {
 // 返回值：移除的成员数量，不包括不存在于集合中的成员。
 func exec_SET_SREM(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SET_SREM, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
 		return reply.MakeIntReply(0)
@@ -193,6 +206,7 @@ func init() {
 	RegisterCommand(_const.CMD_SET_SISMEMBER, exec_SET_SISMEMBER, 3)
 	RegisterCommand(_const.CMD_SET_SMEMBERS, exec_SET_SMEMBERS, 2)
 	RegisterCommand(_const.CMD_SET_SMOVE, exec_SET_SMOVE, 4)
-	RegisterCommand(_const.CMD_SET_SPOP, exec_SET_SPOP, -2)
+	RegisterCommand(_const.CMD_SET_SPOP, exec_SET_SPOP, 2)
 	RegisterCommand(_const.CMD_SET_SRANDMEMBER, exec_SET_SRANDMEMBER, -2)
+	RegisterCommand(_const.CMD_SET_SREM, exec_SET_SREM, -3)
 }

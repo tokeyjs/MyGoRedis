@@ -70,3 +70,8 @@ func (list *List) PopBack() (string, error) {
 func (list *List) PushBack(value string) {
 	_ = list.data.AddElemTail(value)
 }
+
+// 获取区间元素
+func (list *List) GetRange(start, stop int32) []string {
+	return list.data.GetRange(start, stop)
+}

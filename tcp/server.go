@@ -2,8 +2,8 @@ package tcp
 
 import (
 	"MyGoRedis/interface/tcp"
+	"MyGoRedis/lib/logger"
 	"context"
-	"github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"os/signal"
@@ -35,7 +35,7 @@ func ListenAndServeWithSignal(
 	if err != nil {
 		return err
 	}
-	logrus.Infof("start listen %v ...", cfg.Address)
+	logger.Infof("start listen %v ...", cfg.Address)
 	ListenAndServe(listener, handler, closeChan)
 	return nil
 }
@@ -59,10 +59,10 @@ func ListenAndServe(
 	for true {
 		conn, err := listener.Accept()
 		if err != nil {
-			logrus.Errorf("accept error: %v", err)
+			logger.Errorf("accept error: %v", err)
 			break
 		}
-		logrus.Infof("new client[%v] connection.", conn.RemoteAddr().String())
+		logger.Infof("new client[%v] connection.", conn.RemoteAddr().String())
 		// 处理新客户端
 		waitDone.Add(1)
 		go func() {

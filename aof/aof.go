@@ -3,11 +3,11 @@ package aof
 import (
 	"MyGoRedis/config"
 	databaseface "MyGoRedis/interface/database"
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/lib/utils"
 	"MyGoRedis/resp/connection"
 	"MyGoRedis/resp/parser"
 	"MyGoRedis/resp/reply"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"strconv"
@@ -62,13 +62,13 @@ func (handler *AofHandler) handleAof() {
 		if p.dbIndex != handler.currentDB {
 			selectDBCmdData := reply.MakeMultiBulkReply(utils.ToCmdLine("select", strconv.Itoa(p.dbIndex))).ToBytes()
 			if _, err := handler.aofFile.Write(selectDBCmdData); err != nil {
-				logrus.Errorf("aof insert selectdbcmd [%v] error:%v", p.dbIndex, err)
+				logger.Errorf("aof insert selectdbcmd [%v] error:%v", p.dbIndex, err)
 				continue
 			}
 			handler.currentDB = p.dbIndex
 		}
 		if _, err := handler.aofFile.Write(reply.MakeMultiBulkReply(p.cmdLine).ToBytes()); err != nil {
-			logrus.Errorf("aof write cmd error; srcCmd:[%v]  error:[%v]", string(reply.MakeMultiBulkReply(p.cmdLine).ToBytes()), err)
+			logger.Errorf("aof write cmd error; srcCmd:[%v]  error:[%v]", string(reply.MakeMultiBulkReply(p.cmdLine).ToBytes()), err)
 			continue
 		}
 
@@ -79,7 +79,7 @@ func (handler *AofHandler) handleAof() {
 func (handler *AofHandler) loadAof() {
 	file, err := os.Open(handler.aofFileName)
 	if err != nil {
-		logrus.Errorf("open aof error:%v", err)
+		logger.Errorf("open aof error:%v", err)
 		return
 	}
 	defer file.Close()
@@ -90,21 +90,21 @@ func (handler *AofHandler) loadAof() {
 			if p.Err == io.EOF {
 				break
 			}
-			logrus.Errorln(p.Err)
+			logger.Error(p.Err)
 			continue
 		}
 		if p.Data == nil {
-			logrus.Errorf("data is nil\n")
+			logger.Errorf("data is nil\n")
 			continue
 		}
 		r, ok := p.Data.(*reply.MultiBulkReply)
 		if !ok {
-			logrus.Errorf("data err: %v\n", string(p.Data.ToBytes()))
+			logger.Errorf("data err: %v\n", string(p.Data.ToBytes()))
 			continue
 		}
 		rep := handler.database.Exec(fakeConn, r.Args)
 		if reply.IsErrReply(rep) {
-			logrus.Errorf("exec err: %v\n", string(rep.ToBytes()))
+			logger.Errorf("exec err: %v\n", string(rep.ToBytes()))
 		}
 	}
 }

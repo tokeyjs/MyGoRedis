@@ -10,11 +10,14 @@ import (
 
 // 实现命令
 
+// 检查完成
+
 // 含义：删除哈希表中一个或多个字段。
 // 用法：HDEL key field1 [field2 ...]
 // 返回值：被成功移除的字段的数量，不包括被忽略的字段。
 func exec_HASH_HDEL(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HDEL, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
 		return reply.MakeIntReply(0)
@@ -87,7 +90,6 @@ func exec_HASH_HGETALL(db *DB, args [][]byte) resp.Reply {
 	}
 	typeHash := _const.DataToHash(it)
 	if typeHash == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	slic := typeHash.GetAllKV()
@@ -109,9 +111,14 @@ func exec_HASH_HINCRBY(db *DB, args [][]byte) resp.Reply {
 	if err != nil {
 		return reply.MakeStandardErrReply("increment is error")
 	}
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HINCRBY, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		return reply.MakeIntReply(0)
+		// 新建一个
+		myh := myhash.MakeHash()
+		myh.Set(field, utils.Float64ToString(incr))
+		db.PutEntity(key, myh)
+		return reply.MakeBulkReply(utils.Float64ToByte(incr))
 	}
 	typeHash := _const.DataToHash(it)
 	if typeHash == nil {
@@ -120,7 +127,7 @@ func exec_HASH_HINCRBY(db *DB, args [][]byte) resp.Reply {
 	}
 	ret, err := typeHash.Incr(field, incr)
 	if err != nil {
-		return reply.MakeNullBulkReply()
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	return reply.MakeBulkReply(utils.Float64ToByte(ret))
 }
@@ -131,17 +138,21 @@ func exec_HASH_HINCRBY(db *DB, args [][]byte) resp.Reply {
 func exec_HASH_HINCRBYFLOAT(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	field := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HINCRBYFLOAT, args...))
 	incr, err := utils.StringToFloat64(string(args[2]))
 	if err != nil {
 		return reply.MakeStandardErrReply("increment is error")
 	}
 	it, ok := db.GetEntity(key)
 	if !ok {
-		return reply.MakeIntReply(0)
+		// 新建一个
+		myh := myhash.MakeHash()
+		myh.Set(field, utils.Float64ToString(incr))
+		db.PutEntity(key, myh)
+		return reply.MakeBulkReply(utils.Float64ToByte(incr))
 	}
 	typeHash := _const.DataToHash(it)
 	if typeHash == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	ret, err := typeHash.Incr(field, incr)
@@ -221,6 +232,7 @@ func exec_HASH_HMGET(db *DB, args [][]byte) resp.Reply {
 // 返回值：始终返回OK。
 func exec_HASH_HMSET(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HMSET, args...))
 	var typeHash *myhash.Hash
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -253,13 +265,17 @@ func exec_HASH_HSET(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	field := string(args[1])
 	value := string(args[2])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HSET, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		return reply.MakeIntReply(0)
+		// 新建一个
+		myh := myhash.MakeHash()
+		myh.Set(field, value)
+		db.PutEntity(key, myh)
+		return reply.MakeIntReply(1)
 	}
 	typeHash := _const.DataToHash(it)
 	if typeHash == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	return reply.MakeIntReply(int64(typeHash.Set(field, value)))
@@ -272,9 +288,14 @@ func exec_HASH_HSETNX(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	field := string(args[1])
 	value := string(args[2])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_HASH_HSETNX, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		return reply.MakeIntReply(0)
+		// 新建一个
+		myh := myhash.MakeHash()
+		myh.Set(field, value)
+		db.PutEntity(key, myh)
+		return reply.MakeIntReply(1)
 	}
 	typeHash := _const.DataToHash(it)
 	if typeHash == nil {

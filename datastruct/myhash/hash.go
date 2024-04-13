@@ -1,7 +1,6 @@
 package myhash
 
 import (
-	"errors"
 	"strconv"
 )
 
@@ -61,7 +60,10 @@ func (h *Hash) GetAllKV() []struct {
 func (h *Hash) Incr(field string, incr float64) (float64, error) {
 	val, ok := h.data[field]
 	if !ok {
-		return 0, errors.New("not field is " + field)
+		// 新建一个
+		h.size++
+		h.data[field] = strconv.FormatFloat(incr, 'g', -1, 64)
+		return incr, nil
 	}
 	// 转成float64
 	parseFloat, err := strconv.ParseFloat(val, 64)

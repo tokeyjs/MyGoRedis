@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"MyGoRedis/config"
 	"MyGoRedis/resp/client"
 	"context"
 	"errors"
@@ -17,6 +18,13 @@ func (cf *connectionFactory) MakeObject(ctx context.Context) (*pool.PooledObject
 		return nil, err
 	}
 	c.Start()
+
+	// 进行连接认证
+	if len(config.Properties.RequirePass) > 0 {
+		authData := make([][]byte, 0)
+		authData = append(authData, []byte("auth"))
+		authData = append(authData, []byte(config.Properties.RequirePass))
+	}
 	return pool.NewPooledObject(c), nil
 }
 

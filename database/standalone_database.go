@@ -5,8 +5,8 @@ import (
 	"MyGoRedis/config"
 	_const "MyGoRedis/const"
 	"MyGoRedis/interface/resp"
+	"MyGoRedis/lib/logger"
 	"MyGoRedis/resp/reply"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -48,7 +48,7 @@ func NewStandaloneDatabase() *StandaloneDatabase {
 func (database *StandaloneDatabase) Exec(client resp.Connection, args [][]byte) resp.Reply {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("panic: %v", err)
+			logger.Errorf("panic: %v", err)
 		}
 	}()
 	cmdName := strings.ToLower(string(args[0]))

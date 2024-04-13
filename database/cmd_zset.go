@@ -7,15 +7,19 @@ import (
 	"MyGoRedis/lib/utils"
 	"MyGoRedis/resp/reply"
 	"strconv"
+	"strings"
 )
 
 // 实现命令
+
+// 检查完成
 
 // 含义：向有序集合添加一个或多个成员，或更新已存在成员的分数
 // 用法：ZADD key score member [score member ...]
 // 返回值：成功添加到有序集合的新成员数量，不包括已经存在但分数被更新的成员
 func exec_ZSET_ZADD(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_ZSET_ZADD, args...))
 	var typeZSet *myzset.ZSet
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -40,7 +44,11 @@ func exec_ZSET_ZADD(db *DB, args [][]byte) resp.Reply {
 		member := string(args[index])
 		index++
 		// 设置
-		count += typeZSet.Add(member, float32(score))
+		if 0 == typeZSet.Add(member, float32(score)) {
+			typeZSet.Update(member, float32(score))
+		} else {
+			count++
+		}
 	}
 	db.PutEntity(key, typeZSet)
 	return reply.MakeIntReply(int64(count))
@@ -57,7 +65,7 @@ func exec_ZSET_ZCARD(db *DB, args [][]byte) resp.Reply {
 	}
 	typeZSet := _const.DataToZSET(it)
 	if typeZSet == nil {
-		return reply.MakeIntReply(0)
+		return reply.MakeUnknownErrReply()
 	}
 	return reply.MakeIntReply(int64(typeZSet.Size()))
 }
@@ -91,6 +99,7 @@ func exec_ZSET_ZCOUNT(db *DB, args [][]byte) resp.Reply {
 // 返回值：增加后的成员分数
 func exec_ZSET_ZINCRBY(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_ZSET_ZINCRBY, args...))
 	incr, err := utils.StringToFloat64(string(args[1]))
 	if err != nil {
 		return reply.MakeIntReply(0)
@@ -145,8 +154,15 @@ func exec_ZSET_ZRANGE(db *DB, args [][]byte) resp.Reply {
 		return reply.MakeUnknownErrReply()
 	}
 	slic := make([]string, 0)
-	for _, val := range valtmps {
-		slic = append(slic, val.Value)
+	if len(args) > 3 && strings.ToLower(string(args[3])) == "withscores" {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+			slic = append(slic, utils.Float64ToString(float64(val.Score)))
+		}
+	} else {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+		}
 	}
 	return reply.MakeMultiBulkReply(utils.ToCmdLine(slic...))
 }
@@ -178,8 +194,15 @@ func exec_ZSET_ZRANGEBYSCORE(db *DB, args [][]byte) resp.Reply {
 		return reply.MakeUnknownErrReply()
 	}
 	slic := make([]string, 0)
-	for _, val := range valtmps {
-		slic = append(slic, val.Value)
+	if len(args) > 3 && strings.ToLower(string(args[3])) == "withscores" {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+			slic = append(slic, utils.Float64ToString(float64(val.Score)))
+		}
+	} else {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+		}
 	}
 	return reply.MakeMultiBulkReply(utils.ToCmdLine(slic...))
 }
@@ -211,6 +234,7 @@ func exec_ZSET_ZRANK(db *DB, args [][]byte) resp.Reply {
 // 返回值：被成功移除的成员数量，不包括不存在于集合中的成员。
 func exec_ZSET_ZREM(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_ZSET_ZREM, args...))
 	var typeZSet *myzset.ZSet
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -235,6 +259,7 @@ func exec_ZSET_ZREM(db *DB, args [][]byte) resp.Reply {
 // 返回值：被移除的成员数量。
 func exec_ZSET_ZREMRANGEBYRANK(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_ZSET_ZREMRANGEBYRANK, args...))
 	var typeZSet *myzset.ZSet
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -246,11 +271,11 @@ func exec_ZSET_ZREMRANGEBYRANK(db *DB, args [][]byte) resp.Reply {
 	}
 	start, err := strconv.Atoi(string(args[1]))
 	if err != nil {
-		return reply.MakeIntReply(0)
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	stop, err := strconv.Atoi(string(args[2]))
 	if err != nil {
-		return reply.MakeIntReply(0)
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	count := typeZSet.RemoveRangeRank(int32(start), int32(stop))
 	return reply.MakeIntReply(int64(count))
@@ -261,6 +286,7 @@ func exec_ZSET_ZREMRANGEBYRANK(db *DB, args [][]byte) resp.Reply {
 // 返回值：被移除的成员数量。
 func exec_ZSET_ZREMRANGEBYSCORE(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_ZSET_ZREMRANGEBYSCORE, args...))
 	var typeZSet *myzset.ZSet
 	it, ok := db.GetEntity(key)
 	if !ok {
@@ -272,11 +298,11 @@ func exec_ZSET_ZREMRANGEBYSCORE(db *DB, args [][]byte) resp.Reply {
 	}
 	minScore, err := utils.StringToFloat64(string(args[1]))
 	if err != nil {
-		return reply.MakeIntReply(0)
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	maxScore, err := utils.StringToFloat64(string(args[2]))
 	if err != nil {
-		return reply.MakeIntReply(0)
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	return reply.MakeIntReply(int64(typeZSet.RemoveRangeScore(float32(minScore), float32(maxScore))))
 }
@@ -297,19 +323,26 @@ func exec_ZSET_ZREVRANGE(db *DB, args [][]byte) resp.Reply {
 	}
 	start, err := strconv.Atoi(string(args[1]))
 	if err != nil {
-		return reply.MakeNullBulkReply()
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	stop, err := strconv.Atoi(string(args[2]))
 	if err != nil {
-		return reply.MakeNullBulkReply()
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	valtmps, err := typeZSet.RankRange(int32(start), int32(stop))
 	if err != nil {
 		return reply.MakeUnknownErrReply()
 	}
 	slic := make([]string, 0)
-	for _, val := range valtmps {
-		slic = append(slic, val.Value)
+	if len(args) > 3 && strings.ToLower(string(args[3])) == "withscores" {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+			slic = append(slic, utils.Float64ToString(float64(val.Score)))
+		}
+	} else {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+		}
 	}
 	return reply.MakeMultiBulkReply(utils.ToCmdLine(slic...))
 }
@@ -330,19 +363,26 @@ func exec_ZSET_ZREVRANGEBYSCORE(db *DB, args [][]byte) resp.Reply {
 	}
 	minScore, err := utils.StringToFloat64(string(args[1]))
 	if err != nil {
-		return reply.MakeNullBulkReply()
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	maxScore, err := utils.StringToFloat64(string(args[2]))
 	if err != nil {
-		return reply.MakeNullBulkReply()
+		return reply.MakeStandardErrReply(err.Error())
 	}
 	valtmps, err := typeZSet.ScoreRange(float32(minScore), float32(maxScore))
 	if err != nil {
 		return reply.MakeUnknownErrReply()
 	}
 	slic := make([]string, 0)
-	for _, val := range valtmps {
-		slic = append(slic, val.Value)
+	if len(args) > 3 && strings.ToLower(string(args[3])) == "withscores" {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+			slic = append(slic, utils.Float64ToString(float64(val.Score)))
+		}
+	} else {
+		for _, val := range valtmps {
+			slic = append(slic, val.Value)
+		}
 	}
 	return reply.MakeMultiBulkReply(utils.ToCmdLine(slic...))
 }
@@ -396,14 +436,14 @@ func init() {
 	RegisterCommand(_const.CMD_ZSET_ZCARD, exec_ZSET_ZCARD, 2)
 	RegisterCommand(_const.CMD_ZSET_ZCOUNT, exec_ZSET_ZCOUNT, 4)
 	RegisterCommand(_const.CMD_ZSET_ZINCRBY, exec_ZSET_ZINCRBY, 4)
-	RegisterCommand(_const.CMD_ZSET_ZRANGE, exec_ZSET_ZRANGE, 4)
-	RegisterCommand(_const.CMD_ZSET_ZRANGEBYSCORE, exec_ZSET_ZRANGEBYSCORE, 4)
+	RegisterCommand(_const.CMD_ZSET_ZRANGE, exec_ZSET_ZRANGE, -4)
+	RegisterCommand(_const.CMD_ZSET_ZRANGEBYSCORE, exec_ZSET_ZRANGEBYSCORE, -4)
 	RegisterCommand(_const.CMD_ZSET_ZRANK, exec_ZSET_ZRANK, 3)
 	RegisterCommand(_const.CMD_ZSET_ZREM, exec_ZSET_ZREM, -3)
 	RegisterCommand(_const.CMD_ZSET_ZREMRANGEBYRANK, exec_ZSET_ZREMRANGEBYRANK, 4)
 	RegisterCommand(_const.CMD_ZSET_ZREMRANGEBYSCORE, exec_ZSET_ZREMRANGEBYSCORE, 4)
-	RegisterCommand(_const.CMD_ZSET_ZREVRANGE, exec_ZSET_ZREVRANGE, 4)
-	RegisterCommand(_const.CMD_ZSET_ZREVRANGEBYSCORE, exec_ZSET_ZREVRANGEBYSCORE, 4)
+	RegisterCommand(_const.CMD_ZSET_ZREVRANGE, exec_ZSET_ZREVRANGE, -4)
+	RegisterCommand(_const.CMD_ZSET_ZREVRANGEBYSCORE, exec_ZSET_ZREVRANGEBYSCORE, -4)
 	RegisterCommand(_const.CMD_ZSET_ZREVRANK, exec_ZSET_ZREVRANK, 3)
 	RegisterCommand(_const.CMD_ZSET_ZSCORE, exec_ZSET_ZSCORE, 3)
 }

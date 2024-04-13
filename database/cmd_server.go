@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// 检查完成
+
 // 实现命令
 // 含义：获取服务器的当前时间，以UNIX时间戳和微秒的格式返回。
 // 用法：TIME
@@ -31,7 +33,7 @@ func exec_SERVER_TIME(db *DB, args [][]byte) resp.Reply {
 // 返回值：执行成功时返回OK
 func exec_SERVER_FLUSHDB(db *DB, args [][]byte) resp.Reply {
 	db.Flush()
-	db.aofAdd(utils.ToCmdLine2(_const.CMD_SERVER_FLUSHDB, args...))
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_SERVER_FLUSHDB))
 	return reply.MakeOkReply()
 }
 

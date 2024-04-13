@@ -11,21 +11,24 @@ import (
 
 // 实现命令
 
+// 检查完成
+
 // 含义：将指定值追加到键的当前值的末尾。
 // 用法：APPEND key value
 // 返回值：追加后的字符串长度
 func exec_STRING_APPEND(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	value := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_APPEND, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		// 不存在--》直接设置新值
-		exec_STRING_SET(db, args)
+		str := mystring.MakeString()
+		str.Set(value)
+		db.PutEntity(key, str)
 		return reply.MakeIntReply(int64(len(value)))
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	return reply.MakeIntReply(int64(typeString.AppendStr(value)))
@@ -36,15 +39,16 @@ func exec_STRING_APPEND(db *DB, args [][]byte) resp.Reply {
 // 返回值：减少后的值。
 func exec_STRING_DECR(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_DECR, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		// 不存在--》初始化为0再执行decr操作
-		exec_STRING_SET(db, utils.ToCmdLine(key, "-1"))
+		str := mystring.MakeString()
+		str.Set("-1")
+		db.PutEntity(key, str)
 		return reply.MakeIntReply(-1)
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	val, err := typeString.Decr()
@@ -62,17 +66,18 @@ func exec_STRING_DECRBY(db *DB, args [][]byte) resp.Reply {
 	decrement := string(args[1])
 	dInt, err := strconv.Atoi(decrement)
 	if err != nil {
-		return reply.MakeUnknownErrReply()
+		return reply.MakeStandardErrReply("cmd 'decrement' is not number")
 	}
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_DECRBY, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		// 不存在--》初始化为0再执行decr操作
-		exec_STRING_SET(db, utils.ToCmdLine(key, strconv.Itoa(-1*dInt)))
+		str := mystring.MakeString()
+		str.Set(strconv.Itoa(-1 * dInt))
+		db.PutEntity(key, str)
 		return reply.MakeIntReply(-1 * int64(dInt))
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	val, err := typeString.DecrNum(float64(dInt))
@@ -93,18 +98,33 @@ func exec_STRING_GET(db *DB, args [][]byte) resp.Reply {
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	return reply.MakeBulkReply([]byte(typeString.Get()))
 }
 
-// 含义：获取指定键值的子字符串。
+// 含义：获取指定键值的子字符串
 // 用法：GETRANGE key start end
-// 返回值：子字符串。
+// 返回值：子字符串
 func exec_STRING_GETRANGE(db *DB, args [][]byte) resp.Reply {
-	//todo
-	return reply.MakeUnknownErrReply()
+	key := string(args[0])
+	start, err := strconv.Atoi(string(args[1]))
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	end, err := strconv.Atoi(string(args[2]))
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	it, ok := db.GetEntity(key)
+	if !ok {
+		return reply.MakeNullBulkReply()
+	}
+	typeString := _const.DataToSTRING(it)
+	if typeString == nil {
+		return reply.MakeUnknownErrReply()
+	}
+	return reply.MakeBulkReply([]byte(typeString.GetRange(int32(start), int32(end))))
 }
 
 // 含义：设置指定键的值，并返回原来的值。
@@ -113,13 +133,17 @@ func exec_STRING_GETRANGE(db *DB, args [][]byte) resp.Reply {
 func exec_STRING_GETSET(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	newVal := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_GETSET, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
+		// 设置值
+		str := mystring.MakeString()
+		str.Set(newVal)
+		db.PutEntity(key, str)
 		return reply.MakeNullBulkReply()
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	oldStr := typeString.Modify(newVal)
@@ -132,14 +156,15 @@ func exec_STRING_GETSET(db *DB, args [][]byte) resp.Reply {
 func exec_STRING_INCR(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	it, ok := db.GetEntity(key)
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_INCR, args...))
 	if !ok {
-		// 不存在--》初始化为0再执行incr操作
-		exec_STRING_SET(db, utils.ToCmdLine(key, "1"))
+		str := mystring.MakeString()
+		str.Set("1")
+		db.PutEntity(key, str)
 		return reply.MakeIntReply(1)
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	val, err := typeString.Incr()
@@ -159,15 +184,16 @@ func exec_STRING_INCRBY(db *DB, args [][]byte) resp.Reply {
 	if err != nil {
 		return reply.MakeUnknownErrReply()
 	}
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_INCRBY, args...))
 	it, ok := db.GetEntity(key)
 	if !ok {
-		// 不存在--》初始化为0再执行decr操作
-		exec_STRING_SET(db, utils.ToCmdLine(key, strconv.Itoa(dInt)))
+		str := mystring.MakeString()
+		str.Set(strconv.Itoa(dInt))
+		db.PutEntity(key, str)
 		return reply.MakeIntReply(int64(dInt))
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	val, err := typeString.IncrNum(float64(dInt))
@@ -183,19 +209,20 @@ func exec_STRING_INCRBY(db *DB, args [][]byte) resp.Reply {
 func exec_STRING_INCRBYFLOAT(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	decrement := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_INCRBYFLOAT, args...))
 	dflo, err := utils.StringToFloat64(decrement)
 	if err != nil {
 		return reply.MakeUnknownErrReply()
 	}
 	it, ok := db.GetEntity(key)
 	if !ok {
-		// 不存在--》初始化为0再执行操作
-		exec_STRING_SET(db, utils.ToCmdLine(key, utils.Float64ToString(dflo)))
+		str := mystring.MakeString()
+		str.Set(utils.Float64ToString(dflo))
+		db.PutEntity(key, str)
 		return reply.MakeBulkReply(utils.Float64ToByte(dflo))
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	val, err := typeString.IncrNum(dflo)
@@ -214,22 +241,24 @@ func exec_STRING_MGET(db *DB, args [][]byte) resp.Reply {
 		key := string(arg)
 		it, ok := db.GetEntity(key)
 		if !ok {
-			return reply.MakeNullBulkReply()
+			slic = append(slic, "nil")
+			continue
 		}
 		typeString := _const.DataToSTRING(it)
 		if typeString == nil {
-			// 错误
-			return reply.MakeUnknownErrReply()
+			slic = append(slic, "nil")
+			continue
 		}
 		slic = append(slic, typeString.Get())
 	}
 	return reply.MakeMultiBulkReply(utils.ToCmdLine(slic...))
 }
 
-// 含义：设置多个键的值。
+// 含义：设置多个键的值
 // 用法：MSET key value [key value ...]
-// 返回值：始终返回OK。
+// 返回值：始终返回OK
 func exec_STRING_MSET(db *DB, args [][]byte) resp.Reply {
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_MSET, args...))
 	indx := 0
 	for indx < len(args) {
 		key := string(args[indx])
@@ -253,6 +282,7 @@ func exec_STRING_MSETNX(db *DB, args [][]byte) resp.Reply {
 	if len(args)%2 == 1 {
 		return reply.MakeIntReply(0)
 	}
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_MSETNX, args...))
 	// 收集key value 并查询是否存在
 	keySlic := make([]string, 0)
 	valueSlic := make([]string, 0)
@@ -286,6 +316,7 @@ func exec_STRING_MSETNX(db *DB, args [][]byte) resp.Reply {
 // 返回值：始终返回OK。
 func exec_STRING_PSETEX(db *DB, args [][]byte) resp.Reply {
 	//todo
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_PSETEX, args...))
 	return reply.MakeUnknownErrReply()
 }
 
@@ -295,6 +326,7 @@ func exec_STRING_PSETEX(db *DB, args [][]byte) resp.Reply {
 func exec_STRING_SET(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	value := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_SET, args...))
 	str := mystring.MakeString()
 	str.Set(value)
 	db.PutEntity(key, str)
@@ -306,6 +338,7 @@ func exec_STRING_SET(db *DB, args [][]byte) resp.Reply {
 // 返回值：始终返回OK。
 func exec_STRING_SETEX(db *DB, args [][]byte) resp.Reply {
 	//todo
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_SETEX, args...))
 	return reply.MakeUnknownErrReply()
 }
 
@@ -315,6 +348,7 @@ func exec_STRING_SETEX(db *DB, args [][]byte) resp.Reply {
 func exec_STRING_SETNX(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	value := string(args[1])
+	db.aofAdd(utils.ToCmdLine2(_const.CMD_STRING_SETNX, args...))
 	str := mystring.MakeString()
 	str.Set(value)
 	return reply.MakeIntReply(int64(db.PutIfAbsent(key, str)))
@@ -331,7 +365,6 @@ func exec_STRING_STRLEN(db *DB, args [][]byte) resp.Reply {
 	}
 	typeString := _const.DataToSTRING(it)
 	if typeString == nil {
-		// 错误
 		return reply.MakeIntReply(0)
 	}
 	return reply.MakeIntReply(int64(typeString.Len()))

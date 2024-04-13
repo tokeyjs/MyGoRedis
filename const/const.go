@@ -72,8 +72,9 @@ const (
 	CMD_LIST_RPOPLPUSH  = "rpoplpush"
 	CMD_LIST_RPUSH      = "rpush"
 	CMD_LIST_RPUSHX     = "rpushx"
+	CMD_LIST_LRANGE     = "lrange"
 
-	// hash
+	// hash TODO待测试
 	CMD_HASH_HDEL         = "hdel"
 	CMD_HASH_HEXISTS      = "hexists"
 	CMD_HASH_HGET         = "hget"
@@ -97,6 +98,7 @@ const (
 	CMD_SET_SMEMBERS    = "smembers"
 	CMD_SET_SMOVE       = "smove"
 	CMD_SET_SPOP        = "spop"
+	CMD_SET_SREM        = "srem"
 	CMD_SET_SRANDMEMBER = "srandmember"
 
 	// zset

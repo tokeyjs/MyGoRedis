@@ -6,6 +6,8 @@ import (
 	"MyGoRedis/resp/reply"
 )
 
+// 检查完成
+
 // 实现命令
 // 含义：用于检查与服务器的连接是否仍然活动。当收到PING命令时，服务器将返回一个PONG响应。
 // 用法：PING
@@ -21,7 +23,6 @@ func exec_CONN_PING(db *DB, args [][]byte) resp.Reply {
 //	// TODO: 其他命令得被拦截
 //	password := string(args[0])
 //	if config.Properties.RequirePass == "" || password == config.Properties.RequirePass {
-//		db.aofAdd(utils.ToCmdLine2(_const.CMD_CONN_AUTH, args...))
 //		// 认证成功
 //		return reply.MakeOkReply()
 //	}

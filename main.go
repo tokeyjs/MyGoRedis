@@ -5,8 +5,8 @@ import (
 	"MyGoRedis/lib/logger"
 	"MyGoRedis/resp/handler"
 	"MyGoRedis/tcp"
+	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 )
 
@@ -37,6 +37,9 @@ func init() {
 	} else {
 		config.Properties = defaultProperties
 	}
+	logger.Infof("mygoredis config load successful!")
+	cf, _ := json.Marshal(config.Properties)
+	logger.Infof("config: %v", string(cf))
 }
 
 func main() {
@@ -47,7 +50,7 @@ func main() {
 		handler.MakeHandler(),
 	)
 	if err != nil {
-		logrus.Errorf("tcp start error: %v", err)
+		logger.Errorf("tcp start error: %v", err)
 	}
 
 }

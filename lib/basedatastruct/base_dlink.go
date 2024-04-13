@@ -415,6 +415,29 @@ func (link *BaseDLink) clear() {
 	link.size.Store(0)
 }
 
+// 获取从start 到 stop的元素
+func (link *BaseDLink) GetRange(start, stop int32) []string {
+	if stop < 0 {
+		stop += link.Size()
+	}
+	if start > stop {
+		return nil
+	}
+	link.rmutex.RLock()
+	defer link.rmutex.RUnlock()
+	slic := make([]string, 0)
+	index := int32(0)
+	node := link.head
+	for index <= stop {
+		if index >= start {
+			slic = append(slic, node.data)
+		}
+		node = node.next
+		index++
+	}
+	return slic
+}
+
 // -- 测试功能
 func showDLink(node *dNode) {
 	for node != nil {
