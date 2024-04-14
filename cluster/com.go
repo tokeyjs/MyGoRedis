@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	_const "MyGoRedis/const"
 	"MyGoRedis/interface/resp"
 	"MyGoRedis/lib/logger"
 	"MyGoRedis/lib/utils"
@@ -50,13 +51,18 @@ func (cluster *ClusterDatabase) relay(peer string, c resp.Connection, args [][]b
 	defer func() {
 		_ = cluster.returnPeerClient(peer, peerClient)
 	}()
-	peerClient.Send(utils.ToCmdLine("select", strconv.Itoa(c.GetDBIndex())))
+	peerClient.Send(utils.ToCmdLine(_const.CMD_CONN_SELECT, strconv.Itoa(c.GetDBIndex())))
 	return peerClient.Send(args)
 }
 
 // 广播
-func (cluster ClusterDatabase) broadcast(c resp.Connection, args [][]byte) map[string]resp.Reply {
+func (cluster *ClusterDatabase) broadcast(c resp.Connection, args [][]byte) map[string]resp.Reply {
 	results := make(map[string]resp.Reply)
+	// 如果当前连接为集群的通信连接，则此命令是转发来的命令不需要进行广播
+	if c.IsClusterClient() {
+		results[cluster.self] = cluster.relay(cluster.self, c, args)
+		return results
+	}
 	for _, node := range cluster.nodes {
 		results[node] = cluster.relay(node, c, args)
 	}

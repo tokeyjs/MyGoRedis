@@ -69,7 +69,7 @@ func (s *BaseSet) GetAll() []string {
 	slic := make([]string, 0, s.Size())
 	s.data.Range(func(key, value any) bool {
 		slic = append(slic, key.(string))
-		return false
+		return true
 	})
 	return slic
 }

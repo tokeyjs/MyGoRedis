@@ -10,6 +10,8 @@ import (
 
 // 命令(不包括redis全部命令)
 const (
+	CMD_CLUSTER_CLUSTERMARK = "clustermark" // 标记客户端连接为集群节点间的通信连接（防止命令被循环广播）
+
 	//server
 	CMD_SERVER_TIME    = "time"
 	CMD_SERVER_FLUSHDB = "flushdb"
@@ -74,7 +76,7 @@ const (
 	CMD_LIST_RPUSHX     = "rpushx"
 	CMD_LIST_LRANGE     = "lrange"
 
-	// hash TODO待测试
+	// hash
 	CMD_HASH_HDEL         = "hdel"
 	CMD_HASH_HEXISTS      = "hexists"
 	CMD_HASH_HGET         = "hget"

@@ -89,6 +89,7 @@ func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
 			logger.Error("require multi bulk reply")
 			continue
 		}
+
 		result := r.db.Exec(client, reply_.Args)
 		if result != nil {
 			_ = client.Write(result.ToBytes())

@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"MyGoRedis/config"
+	_const "MyGoRedis/const"
 	"MyGoRedis/database"
 	databaseface "MyGoRedis/interface/database"
 	"MyGoRedis/interface/resp"
@@ -55,6 +56,19 @@ func (cDB *ClusterDatabase) Exec(client resp.Connection, args [][]byte) (result 
 		}
 	}()
 	cmdName := strings.ToLower(string(args[0]))
+	// 判断该连接是否进行认证
+	if !client.IsCertification() {
+		if cmdName == _const.CMD_CONN_AUTH {
+			// 进行认证
+			if len(args) != 2 {
+				return reply.MakeArgNumErrReply("auth")
+			}
+			return cDB.execAUTH(client, args[1:])
+		} else {
+			// 返回错误
+			return reply.MakeStandardErrReply("NOAUTH Authentication required.")
+		}
+	}
 	cmdFunc, ok := router[cmdName]
 	if !ok {
 		result = reply.MakeStandardErrReply("not supported cmd")
@@ -70,4 +84,15 @@ func (cDB *ClusterDatabase) Close() {
 
 func (cDB *ClusterDatabase) AfterClientClose(c resp.Connection) {
 	cDB.db.AfterClientClose(c)
+}
+
+func (cDB *ClusterDatabase) execAUTH(c resp.Connection, args [][]byte) resp.Reply {
+	password := string(args[0])
+	c.CheckAuth(password)
+	if c.IsCertification() {
+		logger.Debugf("auth successful")
+		return reply.MakeOkReply()
+	}
+	logger.Debugf("auth failed")
+	return reply.MakeStandardErrReply("password error")
 }

@@ -6,6 +6,7 @@ import (
 	"MyGoRedis/lib/utils"
 	"MyGoRedis/lib/wildcard"
 	"MyGoRedis/resp/reply"
+	"strconv"
 )
 
 // 检查完成
@@ -38,18 +39,30 @@ func exec_KEY_EXISTS(db *DB, args [][]byte) resp.Reply {
 // 用法：EXPIRE key seconds
 // 返回值：若设置成功，则返回1，否则返回0。
 func exec_KEY_EXPIRE(db *DB, args [][]byte) resp.Reply {
-	// todo
+	key := string(args[0])
+	sec, err := strconv.Atoi(string(args[1]))
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	// 设置过期时间
+	db.SetExpiredMSec(key, int64(sec*1000))
 	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_EXPIRE, args...))
-	return reply.MakeUnknownErrReply()
+	return reply.MakeIntReply(1)
 }
 
 // 含义：设置键在指定的Unix时间戳（秒级）过期。
 // 用法：EXPIREAT key timestamp
 // 返回值：若设置成功，则返回1，否则返回0。
 func exec_KEY_EXPIREAT(db *DB, args [][]byte) resp.Reply {
-	// todo
+	key := string(args[0])
+	timestamp, err := strconv.ParseInt(string(args[1]), 10, 64)
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	// 设置过期时间
+	db.SetExpiredTimestampsec(key, int64(timestamp*1000))
 	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_EXPIREAT, args...))
-	return reply.MakeUnknownErrReply()
+	return reply.MakeIntReply(1)
 }
 
 // 含义：查找所有符合给定模式的键。
@@ -64,6 +77,9 @@ func exec_KEY_KEYS(db *DB, args [][]byte) resp.Reply {
 		}
 		return true
 	})
+	if len(result) == 0 {
+		return reply.MakeNullBulkReply()
+	}
 	return reply.MakeMultiBulkReply(result)
 }
 
@@ -80,35 +96,50 @@ func exec_KEY_MOVE(db *DB, args [][]byte) resp.Reply {
 // 用法：PERSIST key
 // 返回值：若键成功移除过期时间，则返回1，否则返回0。
 func exec_KEY_PERSIST(db *DB, args [][]byte) resp.Reply {
-	// todo
+	key := string(args[0])
+	// 设置过期时间
+	db.SetExpiredMSec(key, -1)
 	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_PERSIST, args...))
-	return reply.MakeIntReply(0)
+	return reply.MakeIntReply(1)
 }
 
 // 含义：设置键的过期时间，单位为毫秒。
 // 用法：PEXPIRE key milliseconds
 // 返回值：若设置成功，则返回1，否则返回0。
 func exec_KEY_PEXPIRE(db *DB, args [][]byte) resp.Reply {
-	// todo
+	key := string(args[0])
+	msec, err := strconv.Atoi(string(args[1]))
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	// 设置过期时间
+	db.SetExpiredMSec(key, int64(msec))
 	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_PEXPIRE, args...))
-	return reply.MakeIntReply(0)
+	return reply.MakeIntReply(1)
 }
 
 // 含义：设置键在指定的Unix时间戳（毫秒级）过期。
 // 用法：PEXPIREAT key milliseconds-timestamp
 // 返回值：若设置成功，则返回1，否则返回0。
 func exec_KEY_PEXPIREAT(db *DB, args [][]byte) resp.Reply {
-	// todo
+	key := string(args[0])
+	timestampmsec, err := strconv.ParseInt(string(args[1]), 10, 64)
+	if err != nil {
+		return reply.MakeStandardErrReply(err.Error())
+	}
+	// 设置过期时间
+	db.SetExpiredTimestampsec(key, timestampmsec)
 	db.aofAdd(utils.ToCmdLine2(_const.CMD_KEY_PEXPIREAT, args...))
-	return reply.MakeUnknownErrReply()
+	return reply.MakeIntReply(1)
 }
 
 // 含义：获取键的剩余过期时间，单位为毫秒。
 // 用法：PTTL key
 // 返回值：若键存在且有剩余过期时间，则返回剩余过期时间，若键不存在或不过期，则返回-1。
 func exec_KEY_PTTL(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	key := string(args[0])
+	msec := db.GetExpiredMSec(key)
+	return reply.MakeIntReply(msec)
 }
 
 // 含义：从当前数据库中随机返回一个键。
@@ -161,8 +192,12 @@ func exec_KEY_RENAMENX(db *DB, args [][]byte) resp.Reply {
 // 用法：TTL key
 // 返回值：若键存在且有剩余过期时间，则返回剩余过期时间，若键不存在或不过期，则返回-1。
 func exec_KEY_TTL(db *DB, args [][]byte) resp.Reply {
-	// todo
-	return reply.MakeUnknownErrReply()
+	key := string(args[0])
+	msec := db.GetExpiredMSec(key)
+	if msec < 0 {
+		return reply.MakeIntReply(msec)
+	}
+	return reply.MakeIntReply(msec / 1000)
 }
 
 // 含义：获取键存储的值的数据类型。

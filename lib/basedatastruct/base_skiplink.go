@@ -235,10 +235,14 @@ func (skip *BaseSkipLink) GetRankRangeElem(minRank, maxRank int32) ([]*Valtmp, e
 	return res, nil
 }
 func (skip *BaseSkipLink) getRankRangeElem(minRank, maxRank int32) ([]*skNode, error) {
+	cSize := skip.Size()
 	skip.rmutex.RLock()
 	defer skip.rmutex.RUnlock()
 	res := make([]*skNode, 0)
-	if minRank > maxRank {
+	if maxRank < 0 {
+		maxRank += cSize
+	}
+	if minRank > maxRank || minRank >= cSize {
 		return nil, errors.New("minScore >= maxScore")
 	}
 	idx := int32(0)
@@ -267,6 +271,7 @@ func (skip *BaseSkipLink) GetIndexElem(value string) (int32, error) {
 		if node.levelNext[0].value == value {
 			return idx, nil
 		}
+		node = node.levelNext[0]
 		idx++
 	}
 	return -1, errors.New("not found ")
@@ -358,6 +363,8 @@ func (skip *BaseSkipLink) Incr(value string, score float32, incr float32) error 
 		return errors.New("not found")
 	}
 	node.score += incr
+	// 对跳表进行调整
+	skip.deal(node)
 	return nil
 }
 

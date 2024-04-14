@@ -10,4 +10,6 @@ type Connection interface {
 	GetIdle() int32            //-->获取空闲时长s
 	IsTimeOut() bool           //-->判断客户端是否超时（空闲连接清理）
 	UpdateConn()               // 更新连接最新活动时间
+	IsClusterClient() bool     // 是否为集群间的内部连接
+	SetClusterConn()           // 标记该连接为集群内部连接
 }

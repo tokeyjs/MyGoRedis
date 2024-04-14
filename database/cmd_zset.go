@@ -151,7 +151,7 @@ func exec_ZSET_ZRANGE(db *DB, args [][]byte) resp.Reply {
 	}
 	valtmps, err := typeZSet.RankRange(int32(start), int32(stop))
 	if err != nil {
-		return reply.MakeUnknownErrReply()
+		return reply.MakeStatusReply(err.Error())
 	}
 	slic := make([]string, 0)
 	if len(args) > 3 && strings.ToLower(string(args[3])) == "withscores" {

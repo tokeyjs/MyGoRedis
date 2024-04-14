@@ -9,6 +9,7 @@ import (
 
 func makeRouter() map[string]CmdFunc {
 	return map[string]CmdFunc{
+		_const.CMD_CLUSTER_CLUSTERMARK: curNodeFunc,
 		// server
 		_const.CMD_SERVER_TIME:    curNodeFunc,
 		_const.CMD_SERVER_FLUSHDB: flushdbFunc,

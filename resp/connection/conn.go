@@ -16,6 +16,17 @@ type Connection struct {
 	isCF            bool  //是否进行认证
 	connTimeStamp   int64 //连接时的时间戳(s)
 	activeTimeStamp int64 //上次收到客户端命令时间戳(s)
+	clusterConn     bool  // 标记集群间通信连接
+}
+
+// 设置该连接为集群中各个节点通信的连接
+func (c *Connection) SetClusterConn() {
+	c.clusterConn = true
+}
+
+// 是否为集群的内部通信连接
+func (c *Connection) IsClusterClient() bool {
+	return c.clusterConn
 }
 
 func (c *Connection) UpdateConn() {
@@ -56,6 +67,7 @@ func NewConn(conn net.Conn) *Connection {
 		isCF:            len(config.Properties.RequirePass) <= 0,
 		connTimeStamp:   time.Now().Unix(),
 		activeTimeStamp: time.Now().Unix(),
+		clusterConn:     false,
 	}
 }
 
@@ -66,6 +78,7 @@ func NewFakeConn() *Connection {
 		isCF:            true,
 		connTimeStamp:   time.Now().Unix(),
 		activeTimeStamp: time.Now().Unix(),
+		clusterConn:     true,
 	}
 }
 

@@ -111,7 +111,7 @@ func (h *Hash) Set(field string, value string) int32 {
 
 // 获取所有值
 func (h *Hash) GetAllValue() []string {
-	slic := make([]string, h.size)
+	slic := make([]string, 0)
 	for _, v := range h.data {
 		slic = append(slic, v)
 	}

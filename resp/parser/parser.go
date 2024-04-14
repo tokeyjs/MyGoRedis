@@ -148,6 +148,7 @@ func readLine(bufReader *bufio.Reader, state *readState) ([]byte, bool, error) {
 			return nil, true, err
 		}
 		if len(msg) == 0 || (msg[len(msg)-1] != '\n' && msg[len(msg)-2] != '\r') {
+			state.bulkLen = 0
 			return nil, false, errors.New("protocol error: " + string(msg))
 		}
 		state.bulkLen = 0

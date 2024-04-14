@@ -107,7 +107,6 @@ func exec_SET_SMEMBERS(db *DB, args [][]byte) resp.Reply {
 	}
 	typeSet := _const.DataToSET(it)
 	if typeSet == nil {
-		// 错误
 		return reply.MakeUnknownErrReply()
 	}
 	slic := typeSet.GetAll()

@@ -107,4 +107,5 @@ func (handler *AofHandler) loadAof() {
 			logger.Errorf("exec err: %v\n", string(rep.ToBytes()))
 		}
 	}
+	logger.Infof("aof data load successful")
 }

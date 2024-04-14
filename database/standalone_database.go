@@ -70,6 +70,9 @@ func (database *StandaloneDatabase) Exec(client resp.Connection, args [][]byte) 
 			return reply.MakeArgNumErrReply("select")
 		}
 		return execSelect(client, database, args[1:])
+	} else if cmdName == _const.CMD_CLUSTER_CLUSTERMARK {
+		// 集群间的连接认证
+		return execCLUSTERMARK(client, database, args)
 	}
 	return database.dbSet[client.GetDBIndex()].Exec(client, args)
 }
@@ -98,7 +101,15 @@ func execAUTH(c resp.Connection, database *StandaloneDatabase, args [][]byte) re
 	password := string(args[0])
 	c.CheckAuth(password)
 	if c.IsCertification() {
+		logger.Debugf("auth successful")
 		return reply.MakeOkReply()
 	}
+	logger.Debugf("auth failed")
 	return reply.MakeStandardErrReply("password error")
+}
+
+// 设置当前连接为集群节点间的连接
+func execCLUSTERMARK(c resp.Connection, database *StandaloneDatabase, args [][]byte) resp.Reply {
+	c.SetClusterConn()
+	return reply.MakeOkReply()
 }
