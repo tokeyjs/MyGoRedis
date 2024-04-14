@@ -46,6 +46,10 @@ func (cluster *ClusterDatabase) relay(peer string, c resp.Connection, args [][]b
 	}
 	peerClient, err := cluster.getPeerClient(peer)
 	if err != nil {
+		// 获取客户端连接错误，将该节点下线
+		cluster.peerPicker.RemoveNode(peer)
+		cluster.nodes.Delete(peer)
+		logger.Infof("node[%v] disconnection.", peer)
 		return reply.MakeStandardErrReply(err.Error())
 	}
 	defer func() {
@@ -63,8 +67,9 @@ func (cluster *ClusterDatabase) broadcast(c resp.Connection, args [][]byte) map[
 		results[cluster.self] = cluster.relay(cluster.self, c, args)
 		return results
 	}
-	for _, node := range cluster.nodes {
-		results[node] = cluster.relay(node, c, args)
-	}
+	cluster.nodes.Range(func(key, value any) bool {
+		results[key.(string)] = cluster.relay(key.(string), c, args)
+		return true
+	})
 	return results
 }

@@ -4,6 +4,7 @@ import (
 	"MyGoRedis/config"
 	_const "MyGoRedis/const"
 	"MyGoRedis/resp/client"
+	"MyGoRedis/resp/reply"
 	"context"
 	"errors"
 	pool "github.com/jolestar/go-commons-pool/v2"
@@ -49,6 +50,14 @@ func (cf *connectionFactory) ValidateObject(ctx context.Context, object *pool.Po
 }
 
 func (cf *connectionFactory) ActivateObject(ctx context.Context, object *pool.PooledObject) error {
+	c, ok := object.Object.(*client.Client)
+	if !ok {
+		return errors.New("type mismatch")
+	}
+	send := c.Send([][]byte{[]byte("PING")})
+	if reply.IsErrReply(send) {
+		return errors.New("cluser connection error.")
+	}
 	return nil
 }
 

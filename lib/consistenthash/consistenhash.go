@@ -1,29 +1,37 @@
 package consistenthash
 
-import "github.com/serialx/hashring"
+import (
+	"github.com/serialx/hashring"
+)
 
 type NodeMap struct {
-	nodes []string           //记录所有节点
-	har   *hashring.HashRing // 一致性hash环
+	size int32              //记录所有节点 map[string]struct{}
+	har  *hashring.HashRing // 一致性hash环
 }
 
 func NewNodeMap() *NodeMap {
 	return &NodeMap{
-		nodes: make([]string, 0),
-		har:   hashring.New(nil),
+		size: 0,
+		har:  hashring.New(nil),
 	}
 }
 
 func (m *NodeMap) IsEmpty() bool {
-	return len(m.nodes) == 0
+	return m.size == 0
 }
 
 // 添加节点
 func (m *NodeMap) AddNode(nodes ...string) {
 	for _, node := range nodes {
 		m.har = m.har.AddNode(node)
-		m.nodes = append(m.nodes, node)
+		m.size++
 	}
+}
+
+// 删除节点
+func (m *NodeMap) RemoveNode(node string) {
+	m.har = m.har.RemoveNode(node)
+	m.size--
 }
 
 // 查找该key的数据应该去哪个node中

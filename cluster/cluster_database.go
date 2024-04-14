@@ -12,11 +12,12 @@ import (
 	"context"
 	pool "github.com/jolestar/go-commons-pool/v2"
 	"strings"
+	"sync"
 )
 
 type ClusterDatabase struct {
 	self               string
-	nodes              []string
+	nodes              sync.Map // map[string]struct :包含自身
 	peerPicker         *consistenthash.NodeMap
 	peerConnectionPool map[string]*pool.ObjectPool // 与其他节点的连接池
 	db                 databaseface.DataBase
@@ -29,16 +30,19 @@ var router = makeRouter()
 func MakeClusterDatabase() *ClusterDatabase {
 	cluster := &ClusterDatabase{
 		self:               config.Properties.Self,
-		nodes:              make([]string, 0, len(config.Properties.Peers)+1),
 		peerPicker:         consistenthash.NewNodeMap(),
 		peerConnectionPool: make(map[string]*pool.ObjectPool),
 		db:                 database.NewStandaloneDatabase(),
 	}
 	for _, peer := range config.Properties.Peers {
-		cluster.nodes = append(cluster.nodes, peer)
+		cluster.nodes.Store(peer, struct{}{})
 	}
-	cluster.nodes = append(cluster.nodes, config.Properties.Self)
-	cluster.peerPicker.AddNode(cluster.nodes...)
+	cluster.nodes.Store(config.Properties.Self, struct{}{})
+	cluster.nodes.Range(func(key, value any) bool {
+		node := key.(string)
+		cluster.peerPicker.AddNode(node)
+		return true
+	})
 	ctx := context.Background()
 	for _, peer := range config.Properties.Peers {
 		cluster.peerConnectionPool[peer] = pool.NewObjectPoolWithDefaultConfig(ctx, &connectionFactory{
@@ -71,7 +75,7 @@ func (cDB *ClusterDatabase) Exec(client resp.Connection, args [][]byte) (result 
 	}
 	cmdFunc, ok := router[cmdName]
 	if !ok {
-		result = reply.MakeStandardErrReply("not supported cmd")
+		result = reply.MakeStandardErrReply("ERR unknown command " + cmdName)
 		return
 	}
 	result = cmdFunc(cDB, client, args)
